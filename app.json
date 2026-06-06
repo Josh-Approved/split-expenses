@@ -41,7 +41,8 @@
         {
           "photosPermission": "Attach a receipt photo to an expense."
         }
-      ]
+      ],
+      "expo-splash-screen"
     ]
   }
 }

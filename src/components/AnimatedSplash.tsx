@@ -193,22 +193,34 @@ export default function AnimatedSplash({ ready, onFinish }: Props) {
   );
 }
 
+// Explicit absolute-fill literal — version-safe across React Native releases.
+// RN 0.85 dropped `StyleSheet.absoluteFillObject` from its types (the New
+// Architecture made `absoluteFill` the object), so spelling it out keeps the
+// canonical splash compiling on every SDK the catalogue spans.
+const ABSOLUTE_FILL = {
+  position: 'absolute' as const,
+  top: 0,
+  left: 0,
+  right: 0,
+  bottom: 0,
+};
+
 const styles = StyleSheet.create({
   layer: {
-    ...StyleSheet.absoluteFillObject,
+    ...ABSOLUTE_FILL,
     backgroundColor: PAPER,
     zIndex: 10,
     elevation: 10,
     pointerEvents: 'none',
   },
   center: {
-    ...StyleSheet.absoluteFillObject,
+    ...ABSOLUTE_FILL,
     alignItems: 'center',
     justifyContent: 'center',
     pointerEvents: 'none',
   },
   wordmarkWrap: {
-    ...StyleSheet.absoluteFillObject,
+    ...ABSOLUTE_FILL,
     alignItems: 'center',
     justifyContent: 'flex-end',
     paddingBottom: WORDMARK_BOTTOM,
