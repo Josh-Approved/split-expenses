@@ -24,8 +24,24 @@
       "favicon": "./assets/favicon.png"
     },
     "owner": "josh-approved",
+    "scheme": "splitexpenses",
     "plugins": [
-      "./plugins/withGradleJvmArgs"
+      "./plugins/withGradleJvmArgs",
+      "expo-sqlite",
+      "expo-font",
+      "expo-sharing",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Scan a group's QR code to join it, or snap a receipt to attach to an expense."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Attach a receipt photo to an expense."
+        }
+      ]
     ]
   }
 }
