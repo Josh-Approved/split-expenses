@@ -42,7 +42,8 @@
           "photosPermission": "Attach a receipt photo to an expense."
         }
       ],
-      "expo-splash-screen"
+      "expo-splash-screen",
+      "@react-native-community/datetimepicker"
     ]
   }
 }

@@ -1,20 +1,105 @@
+import React, { useEffect, useRef, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import * as SplashScreen from 'expo-splash-screen';
+import * as Linking from 'expo-linking';
+import { useColorScheme } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import {
+  NavigationContainer,
+  DefaultTheme,
+  DarkTheme,
+  createNavigationContainerRef,
+} from '@react-navigation/native';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
+
+import type { RootStackParamList } from './src/navigation';
+import { useAppFonts, lightColors, darkColors } from './src/theme';
+import { useGroups } from './src/store/groups';
+import { startSyncEngine } from './src/sync/engine';
+import { prefetchRates } from './src/data/fx';
+import { parseShareLink } from './src/sync/share';
+import AnimatedSplash from './src/components/AnimatedSplash';
+
+import GroupsHomeScreen from './src/screens/GroupsHomeScreen';
+import GroupDetailScreen from './src/screens/GroupDetailScreen';
+import AddEditExpenseScreen from './src/screens/AddEditExpenseScreen';
+import MembersScreen from './src/screens/MembersScreen';
+import SettleUpScreen from './src/screens/SettleUpScreen';
+import ShareScreen from './src/screens/ShareScreen';
+import SettingsScreen from './src/screens/SettingsScreen';
+import Credits from './src/components/Credits';
+
+SplashScreen.preventAutoHideAsync().catch(() => {});
+
+const Stack = createNativeStackNavigator<RootStackParamList>();
+export const navRef = createNavigationContainerRef<RootStackParamList>();
 
 export default function App() {
+  const scheme = useColorScheme();
+  const [fontsLoaded] = useAppFonts();
+  const hydrate = useGroups((s) => s.hydrate);
+  const hydrated = useGroups((s) => s.hydrated);
+  const joinShared = useGroups((s) => s.joinShared);
+  const [splashDone, setSplashDone] = useState(false);
+
+  useEffect(() => {
+    void hydrate();
+    void prefetchRates();
+  }, [hydrate]);
+
+  // Start live sync once the store is populated.
+  useEffect(() => {
+    if (hydrated) startSyncEngine();
+  }, [hydrated]);
+
+  // Handle a tapped/scanned share link: join the group, jump to it.
+  const handledInitial = useRef(false);
+  useEffect(() => {
+    if (!hydrated) return;
+    const onUrl = (url: string | null) => {
+      const secret = url ? parseShareLink(url) : null;
+      if (!secret) return;
+      const groupId = joinShared(secret);
+      const go = () => navRef.isReady() && navRef.navigate('GroupDetail', { groupId });
+      if (navRef.isReady()) go();
+      else setTimeout(go, 300);
+    };
+    if (!handledInitial.current) {
+      handledInitial.current = true;
+      Linking.getInitialURL().then(onUrl);
+    }
+    const sub = Linking.addEventListener('url', (e) => onUrl(e.url));
+    return () => sub.remove();
+  }, [hydrated, joinShared]);
+
+  const ready = fontsLoaded && hydrated;
+  const navTheme = scheme === 'dark' ? DarkTheme : DefaultTheme;
+  const c = scheme === 'dark' ? darkColors : lightColors;
+  const themed = {
+    ...navTheme,
+    colors: { ...navTheme.colors, background: c.bg, card: c.bg, text: c.fg, border: c.hairline, primary: c.appAccent },
+  };
+
   return (
-    <View style={styles.container}>
-      <Text>Open up App.tsx to start working on your app!</Text>
-      <StatusBar style="auto" />
-    </View>
+    <SafeAreaProvider>
+      {ready && (
+        <NavigationContainer ref={navRef} theme={themed}>
+          <Stack.Navigator screenOptions={{ headerShown: false, contentStyle: { backgroundColor: c.bg } }}>
+            <Stack.Screen name="GroupsHome" component={GroupsHomeScreen} />
+            <Stack.Screen name="GroupDetail" component={GroupDetailScreen} />
+            <Stack.Screen name="AddEditExpense" component={AddEditExpenseScreen} options={{ presentation: 'modal' }} />
+            <Stack.Screen name="Members" component={MembersScreen} />
+            <Stack.Screen name="SettleUp" component={SettleUpScreen} />
+            <Stack.Screen name="Share" component={ShareScreen} options={{ presentation: 'modal' }} />
+            <Stack.Screen name="Settings" component={SettingsScreen} />
+            <Stack.Screen name="Acknowledgements">
+              {({ navigation }) => <Credits onBack={() => navigation.goBack()} />}
+            </Stack.Screen>
+          </Stack.Navigator>
+        </NavigationContainer>
+      )}
+      {!splashDone && <AnimatedSplash ready={ready} onFinish={() => setSplashDone(true)} />}
+      <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
+    </SafeAreaProvider>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-});
