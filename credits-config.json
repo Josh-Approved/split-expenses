@@ -1,0 +1,15 @@
+{
+  "_comment": "Curated list of frameworks/libraries to credit. Only include packages worth mentioning — runtimes, navigation, UI primitives, anything with a visible role. Skip transitive deps and small utility packages. The generator script will pull name/version/license/url from each package's own package.json. Use 'extra' for non-npm credits (fonts, design assets).",
+  "intro": "This app is built on the work of these open-source projects.",
+  "include": [
+    { "package": "react-native", "displayName": "React Native" },
+    { "package": "expo", "displayName": "Expo" }
+  ],
+  "extra": [
+    {
+      "name": "IBM Plex",
+      "license": "OFL 1.1",
+      "url": "https://www.ibm.com/plex/"
+    }
+  ]
+}

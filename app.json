@@ -1,0 +1,31 @@
+{
+  "expo": {
+    "name": "Split Expenses",
+    "slug": "split-expenses",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.joshapproved.splitexpenses"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "package": "com.joshapproved.splitexpenses"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "owner": "josh-approved",
+    "plugins": [
+      "./plugins/withGradleJvmArgs"
+    ]
+  }
+}
