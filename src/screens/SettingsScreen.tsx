@@ -25,11 +25,15 @@ import {
   Library,
   Check,
   ChevronRight,
+  Download,
+  Upload,
 } from 'lucide-react-native';
 import Constants from 'expo-constants';
 
 import type { RootStackParamList } from '../navigation';
 import { getSetting, setSetting } from '../store/db';
+import { exportAllGroups, importGroupsFromFile } from '../lib/transfer';
+import { enableReminders, disableReminders } from '../lib/reminders';
 import { useTheme, fontFamily, space, radius, target, type as t, hairline, type Colors } from '../theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Settings'>;
@@ -76,6 +80,8 @@ export default function SettingsScreen({ navigation }: Props) {
   const insets = useSafeAreaInsets();
 
   const [reminders, setReminders] = useState(false);
+  const [reminderNote, setReminderNote] = useState<string | null>(null);
+  const [dataNote, setDataNote] = useState<string | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -87,10 +93,45 @@ export default function SettingsScreen({ navigation }: Props) {
     };
   }, []);
 
-  const toggleReminders = (next: boolean) => {
-    setReminders(next);
-    void setSetting(REMINDERS_KEY, next ? '1' : '0');
-    // scheduling wired in step 7
+  const toggleReminders = async (next: boolean) => {
+    setReminderNote(null);
+    if (next) {
+      const granted = await enableReminders();
+      if (!granted) {
+        // Permission denied — keep it off and say so calmly.
+        setReminders(false);
+        void setSetting(REMINDERS_KEY, '0');
+        setReminderNote('Allow notifications in your phone settings to turn this on.');
+        return;
+      }
+      setReminders(true);
+      void setSetting(REMINDERS_KEY, '1');
+    } else {
+      await disableReminders();
+      setReminders(false);
+      void setSetting(REMINDERS_KEY, '0');
+    }
+  };
+
+  const onExport = async () => {
+    setDataNote(null);
+    try {
+      await exportAllGroups();
+    } catch {
+      setDataNote("Couldn't create the backup. Try again.");
+    }
+  };
+
+  const onImport = async () => {
+    setDataNote(null);
+    const result = await importGroupsFromFile();
+    if ('error' in result) {
+      setDataNote(result.error);
+    } else if (result.count > 0) {
+      setDataNote(
+        `Brought in ${result.count} ${result.count === 1 ? 'group' : 'groups'} as a fresh copy.`,
+      );
+    }
   };
 
   return (
@@ -113,7 +154,7 @@ export default function SettingsScreen({ navigation }: Props) {
             <Text style={s.switchLabel}>Remind me what I owe</Text>
             <Switch
               value={reminders}
-              onValueChange={toggleReminders}
+              onValueChange={(next) => void toggleReminders(next)}
               trackColor={{ false: c.hairlineStrong, true: c.appAccent }}
               thumbColor={c.bgElevated}
               ios_backgroundColor={c.hairlineStrong}
@@ -124,6 +165,7 @@ export default function SettingsScreen({ navigation }: Props) {
         <Text style={s.helper}>
           A gentle nudge on YOUR phone about what YOU owe. Off until you turn it on — we never message anyone else.
         </Text>
+        {reminderNote ? <Text style={s.note}>{reminderNote}</Text> : null}
 
         {/* ---- How sharing works ------------------------------------- */}
         <Text style={s.sectionLabel}>How sharing works</Text>
@@ -134,6 +176,17 @@ export default function SettingsScreen({ navigation }: Props) {
             no account, ever.
           </Text>
         </View>
+
+        {/* ---- Your data (manual backup / restore) ------------------- */}
+        <Text style={s.sectionLabel}>Your data</Text>
+        <View style={s.card}>
+          <AboutRow c={c} s={s} icon={Download} label="Export a backup" onPress={() => void onExport()} first />
+          <AboutRow c={c} s={s} icon={Upload} label="Import a backup" onPress={() => void onImport()} />
+        </View>
+        {dataNote ? <Text style={s.note}>{dataNote}</Text> : null}
+        <Text style={s.helper}>
+          A shared trip also re-syncs from other members; a backup is your guarantee for solo groups.
+        </Text>
 
         {/* ---- About (canonical) ------------------------------------- */}
         <Text style={s.sectionLabel}>About</Text>
@@ -245,6 +298,7 @@ function makeStyles(c: Colors) {
     },
     switchLabel: { ...t.base, fontFamily: fontFamily.sansMedium, color: c.fg, flex: 1, marginRight: space.s4 },
     helper: { ...t.sm, fontFamily: fontFamily.sans, color: c.fgMuted, paddingHorizontal: space.s6, paddingTop: space.s3 },
+    note: { ...t.sm, fontFamily: fontFamily.sansMedium, color: c.fg, paddingHorizontal: space.s6, paddingTop: space.s3 },
 
     bodyText: { ...t.sm, fontFamily: fontFamily.sans, color: c.fgMuted, padding: space.s5, lineHeight: 21 },
 

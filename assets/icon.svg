@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <clipPath id="appIconClip">
+      <rect x="0" y="0" width="1024" height="1024" rx="220" ry="220"></rect>
+    </clipPath>
+  </defs>
+  <g clip-path="url(#appIconClip)">
+    <!-- Background: deep azure (the split-expenses per-app accent) -->
+    <rect id="bg" x="0" y="0" width="1024" height="1024" fill="#1E4D8C"></rect>
+
+    <!-- Glyph: one amount (the node at the bottom) splitting up into two shares
+         (the two nodes at the top) — a plain "split between people" mark. Paper-
+         white line-art, vertically centred (296px clear top and bottom). The
+         build script extracts this #glyph group, recolours #FAFAF7 -> accent,
+         and renders it alone on paper for the cold-start splash. -->
+    <g id="glyph" stroke="#FAFAF7" stroke-width="36" stroke-linecap="round" stroke-linejoin="round" fill="#FAFAF7">
+      <!-- Stem up from the payer, then a fork out to each share -->
+      <path d="M 512 694 L 512 512 M 512 512 L 342 330 M 512 512 L 682 330" fill="none"></path>
+      <!-- The two shares -->
+      <circle cx="342" cy="330" r="34"></circle>
+      <circle cx="682" cy="330" r="34"></circle>
+      <!-- The payer -->
+      <circle cx="512" cy="694" r="34"></circle>
+    </g>
+  </g>
+</svg>

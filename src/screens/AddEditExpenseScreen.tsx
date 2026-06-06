@@ -18,11 +18,13 @@ import {
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
+  Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import * as LucideIcons from 'lucide-react-native';
 import { X, Trash2, Camera } from 'lucide-react-native';
+import * as ImagePicker from 'expo-image-picker';
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 
 import type { RootStackParamList } from '../navigation';
@@ -35,7 +37,7 @@ import { payersTotal } from '../math/split';
 import { activeMembers, memberName, formatDate } from '../lib/format';
 import { useTheme, fontFamily, space, radius, target, type as t, hairline, type Colors } from '../theme';
 import { Button, EmptyState } from '../components/ui';
-import { useConfirm, usePrompt } from '../components/Dialogs';
+import { useConfirm, usePrompt, useActionMenu } from '../components/Dialogs';
 import { CurrencyPicker } from '../components/CurrencyPicker';
 import { PayerEditor } from '../components/PayerEditor';
 import { SplitEditor } from '../components/SplitEditor';
@@ -56,6 +58,8 @@ export default function AddEditExpenseScreen({ navigation, route }: Props) {
 
   const confirm = useConfirm();
   const ratePrompt = usePrompt();
+  const receiptMenu = useActionMenu();
+  const permissionInfo = useConfirm();
 
   const members = useMemo(() => (group ? activeMembers(group) : []), [group]);
   const existing = expenseId ? group?.expenses.find((e) => e.id === expenseId) : undefined;
@@ -73,6 +77,7 @@ export default function AddEditExpenseScreen({ navigation, route }: Props) {
   const [categoryKey, setCategoryKey] = useState(() => existing?.category ?? DEFAULT_CATEGORY);
   const [date, setDate] = useState(() => new Date(existing?.date ?? Date.now()));
   const [showDate, setShowDate] = useState(false);
+  const [receiptUri, setReceiptUri] = useState<string | undefined>(() => existing?.receiptUri);
 
   const [payers, setPayers] = useState<Payer[]>(() =>
     existing ? existing.payers : defaultPayerId ? [{ memberId: defaultPayerId, amount: 0 }] : [],
@@ -161,7 +166,7 @@ export default function AddEditExpenseScreen({ navigation, route }: Props) {
       category: categoryKey,
       date: date.getTime(),
       note: note.trim() || undefined,
-      receiptUri: existing?.receiptUri,
+      receiptUri,
     };
     if (isEdit && expenseId) updateExpense(groupId, expenseId, payload);
     else addExpense(groupId, payload);
@@ -199,6 +204,47 @@ export default function AddEditExpenseScreen({ navigation, route }: Props) {
       },
     });
   };
+
+  // ---- receipt photo (local-only; never synced — see data/types.ts) -------
+  const notifyDenied = (what: string) =>
+    permissionInfo.open({
+      title: `${what} is off`,
+      message: `Split Expenses can't use your ${what.toLowerCase()} until you allow it in Settings. Your photo stays on this device.`,
+      confirmLabel: 'OK',
+      onConfirm: () => {},
+    });
+
+  const takePhoto = async () => {
+    const perm = await ImagePicker.requestCameraPermissionsAsync();
+    if (!perm.granted) {
+      notifyDenied('Camera');
+      return;
+    }
+    const result = await ImagePicker.launchCameraAsync({ quality: 0.6 });
+    if (!result.canceled && result.assets[0]) setReceiptUri(result.assets[0].uri);
+  };
+
+  const choosePhoto = async () => {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) {
+      notifyDenied('Photo access');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.6 });
+    if (!result.canceled && result.assets[0]) setReceiptUri(result.assets[0].uri);
+  };
+
+  const openReceiptMenu = () =>
+    receiptMenu.open({
+      title: receiptUri ? 'Receipt photo' : 'Attach receipt',
+      options: [
+        { label: 'Take photo', onPress: () => void takePhoto() },
+        { label: 'Choose photo', onPress: () => void choosePhoto() },
+        ...(receiptUri
+          ? [{ label: 'Remove', destructive: true, onPress: () => setReceiptUri(undefined) }]
+          : []),
+      ],
+    });
 
   return (
     <View style={[s.screen, { paddingTop: insets.top + space.s2 }]}>
@@ -329,16 +375,36 @@ export default function AddEditExpenseScreen({ navigation, route }: Props) {
           />
 
           {/*
-           * LATER: receipt scan / photo attach lands here. A "Scan receipt"
-           * affordance will OCR the total + merchant into the fields above, and
-           * an "Attach photo" will set expense.receiptUri (local-only, never
-           * synced — see data/types.ts). Disabled placeholder for now so the
-           * layout slot is reserved and the wiring point is obvious.
+           * Receipt photo — local-only. The image blob never leaves this device
+           * (the sync engine strips receiptUri before sealing; see
+           * sync/engine.ts and data/types.ts). Reading the total off the photo
+           * (OCR) is a separate, later step.
            */}
-          <Pressable disabled accessibilityRole="button" accessibilityLabel="Scan receipt (coming soon)" style={[s.scanRow, { opacity: 0.4 }]}>
-            <Camera size={18} color={c.fgMuted} />
-            <Text style={s.scanText}>Scan receipt · coming soon</Text>
-          </Pressable>
+          {receiptUri ? (
+            <Pressable
+              onPress={openReceiptMenu}
+              accessibilityRole="button"
+              accessibilityLabel="Receipt photo. Tap to change or remove."
+              style={({ pressed }) => [s.receiptRow, pressed && { opacity: 0.6 }]}
+            >
+              <Image source={{ uri: receiptUri }} style={s.receiptThumb} accessibilityIgnoresInvertColors />
+              <View style={{ flex: 1 }}>
+                <Text style={s.scanText}>Receipt attached</Text>
+                <Text style={s.receiptHint}>Stays on this device · tap to change</Text>
+              </View>
+              <Text style={s.chevron}>›</Text>
+            </Pressable>
+          ) : (
+            <Pressable
+              onPress={openReceiptMenu}
+              accessibilityRole="button"
+              accessibilityLabel="Attach receipt"
+              style={({ pressed }) => [s.scanRow, pressed && { opacity: 0.6 }]}
+            >
+              <Camera size={18} color={c.fgMuted} />
+              <Text style={s.scanText}>Attach receipt</Text>
+            </Pressable>
+          )}
 
           <Button
             label={isEdit ? 'Save changes' : 'Add expense'}
@@ -378,6 +444,8 @@ export default function AddEditExpenseScreen({ navigation, route }: Props) {
       />
       {confirm.element}
       {ratePrompt.element}
+      {receiptMenu.element}
+      {permissionInfo.element}
     </View>
   );
 }
@@ -467,6 +535,18 @@ function makeStyles(c: Colors) {
     datePanel: { marginTop: space.s3, alignItems: 'flex-start' },
 
     scanRow: { flexDirection: 'row', alignItems: 'center', gap: space.s3, paddingVertical: space.s5, marginTop: space.s4 },
-    scanText: { ...t.sm, fontFamily: fontFamily.sansMedium, color: c.fgMuted },
+    scanText: { ...t.sm, fontFamily: fontFamily.sansMedium, color: c.fg },
+    receiptRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space.s4,
+      borderWidth: hairline,
+      borderColor: c.hairlineStrong,
+      borderRadius: radius.md,
+      padding: space.s3,
+      marginTop: space.s4,
+    },
+    receiptThumb: { width: 44, height: 44, borderRadius: radius.sm, backgroundColor: c.bgElevated },
+    receiptHint: { ...t.xs, fontFamily: fontFamily.sans, color: c.fgMuted, marginTop: 1 },
   });
 }

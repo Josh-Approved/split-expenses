@@ -17,6 +17,7 @@ import { useAppFonts, lightColors, darkColors } from './src/theme';
 import { useGroups } from './src/store/groups';
 import { startSyncEngine } from './src/sync/engine';
 import { prefetchRates } from './src/data/fx';
+import { ensureNotificationHandler } from './src/lib/reminders';
 import { parseShareLink } from './src/sync/share';
 import AnimatedSplash from './src/components/AnimatedSplash';
 
@@ -45,6 +46,7 @@ export default function App() {
   useEffect(() => {
     void hydrate();
     void prefetchRates();
+    ensureNotificationHandler();
   }, [hydrate]);
 
   // Start live sync once the store is populated.

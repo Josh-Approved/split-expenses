@@ -18,6 +18,7 @@ import { computeOwed, computePaid } from '../math/split';
 import { formatMoney } from '../data/money';
 import { category } from '../data/categories';
 import { phraseSelfNet, memberName, activeMembers, formatDate } from '../lib/format';
+import { exportGroupCsv } from '../lib/csv';
 import { useTheme, fontFamily, space, radius, type as t, hairline, type Colors } from '../theme';
 import { Avatar, EmptyState } from '../components/ui';
 import { useActionMenu, usePrompt, useConfirm } from '../components/Dialogs';
@@ -75,6 +76,7 @@ export default function GroupDetailScreen({ navigation, route }: Props) {
             prompt.open({ title: 'Rename group', initialValue: group.name, selectAll: true, onSubmit: (txt) => renameGroup(groupId, txt) }),
         },
         { label: 'Change currency', onPress: () => setPickingCurrency(true) },
+        { label: 'Export expenses (CSV)', onPress: () => void exportGroupCsv(group) },
         {
           label: 'Delete group',
           destructive: true,
