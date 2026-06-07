@@ -13,7 +13,7 @@
  */
 
 import React from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet, Linking } from 'react-native';
+import { View, Text, ScrollView, Pressable, StyleSheet, Linking, Share } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
@@ -27,7 +27,7 @@ import {
 } from '../math/balances';
 import { formatMoney } from '../data/money';
 import { memberName, memberById, activeMembers } from '../lib/format';
-import { paymentOptions } from '../lib/payments';
+import { paymentOptions, buildReminderMessage } from '../lib/payments';
 import { useTheme, fontFamily, space, radius, type as t, hairline, type Colors } from '../theme';
 import { EmptyState, SectionLabel } from '../components/ui';
 import { useActionMenu } from '../components/Dialogs';
@@ -101,23 +101,43 @@ export default function SettleUpScreen({ navigation, route }: Props) {
         date: Date.now(),
       });
 
-    const options = [
-      {
-        label: 'Mark as paid in cash',
-        onPress: () => writeSettlement('cash'),
-      },
-      // Only the recipient's shared handles produce hand-off rows; if they
-      // shared none, the array is empty and only "cash" shows.
-      ...paymentOptions(recipient?.handles, transfer.amount, base, group.name).map((opt) => ({
-        label: opt.label,
+    const iOwe = transfer.from === meId;
+    const owedToMe = transfer.to === meId;
+
+    const options = [];
+
+    // Someone owes ME → I can nudge them from my own Messages app (the app
+    // sends nothing; it hands a prefilled draft to the OS share sheet).
+    if (owedToMe) {
+      options.push({
+        label: `Ask ${memberName(group, transfer.from)} to pay`,
         onPress: () => {
-          // We never move money — just open the recipient's app prefilled,
-          // then record that the user marked this transfer settled.
-          Linking.openURL(opt.url).catch(() => Linking.openURL(opt.fallbackUrl).catch(() => {}));
-          writeSettlement('external');
+          const message = buildReminderMessage({
+            debtorName: memberName(group, transfer.from),
+            groupName: group.name,
+            amount: formatMoney(transfer.amount, base),
+            handles: memberById(group, meId)?.handles,
+          });
+          Share.share({ message }).catch(() => {});
         },
-      })),
-    ];
+      });
+    }
+
+    options.push({ label: 'Mark as paid in cash', onPress: () => writeSettlement('cash') });
+
+    // The pay-with hand-offs only make sense when *I'm* the one paying; they
+    // open the recipient's app prefilled. (Never shown when someone owes me.)
+    if (iOwe) {
+      for (const opt of paymentOptions(recipient?.handles, transfer.amount, base, group.name)) {
+        options.push({
+          label: opt.label,
+          onPress: () => {
+            Linking.openURL(opt.url).catch(() => Linking.openURL(opt.fallbackUrl).catch(() => {}));
+            writeSettlement('external');
+          },
+        });
+      }
+    }
 
     menu.open({
       title: `${fromName} → ${toName}   ${formatMoney(transfer.amount, base)}`,

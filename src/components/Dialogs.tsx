@@ -87,7 +87,11 @@ export function useActionMenu(): {
   const choose = useCallback(
     (opt: ActionOption) => {
       close();
-      opt.onPress();
+      // Let the sheet finish dismissing before the action runs. Native
+      // presentations (the OS share sheet, the image picker) are rejected by
+      // iOS if they try to present while this Modal is still animating closed,
+      // so defer past the slide-out. Harmless for non-presenting actions.
+      setTimeout(() => opt.onPress(), 260);
     },
     [close],
   );

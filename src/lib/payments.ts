@@ -80,3 +80,36 @@ export function paymentOptions(
 export function hasAnyHandle(handles: PaymentHandles | undefined): boolean {
   return !!(clean(handles?.venmo) || clean(handles?.paypal) || clean(handles?.cashapp));
 }
+
+/** Plain web links for someone to pay these handles, as "Venmo: …" lines —
+ *  for pasting into a message (not deep links, so they're tappable in a text). */
+export function paymentLinkLines(handles: PaymentHandles | undefined): string[] {
+  const lines: string[] = [];
+  const v = clean(handles?.venmo);
+  if (v) lines.push(`Venmo: venmo.com/u/${v}`);
+  const p = clean(handles?.paypal);
+  if (p) lines.push(`PayPal: paypal.me/${p}`);
+  const ca = clean(handles?.cashapp);
+  if (ca) lines.push(`Cash App: cash.app/$${ca}`);
+  return lines;
+}
+
+/**
+ * A draft the user (the one who's owed) can send from their OWN messaging app
+ * to nudge someone who owes them, with their payment handles so the person can
+ * actually pay. The app never sends this — it only hands the text to the OS
+ * share sheet; the user picks who to send it to and sends it themselves.
+ */
+export function buildReminderMessage(opts: {
+  debtorName: string;
+  groupName: string;
+  /** Pre-formatted amount, e.g. "$12.00". */
+  amount: string;
+  /** The asker's own handles. */
+  handles: PaymentHandles | undefined;
+}): string {
+  const head = `Hi ${opts.debtorName} — for ${opts.groupName} you owe me ${opts.amount}.`;
+  const links = paymentLinkLines(opts.handles);
+  if (links.length === 0) return `${head} Want to settle up?`;
+  return `${head}\n\nYou can pay me here:\n${links.join('\n')}`;
+}
