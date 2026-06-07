@@ -72,7 +72,8 @@ export default function ShareScreen({ route, navigation }: Props) {
     scannedRef.current = true;
     setScanning(false);
     const id = useGroups.getState().joinShared(sec);
-    navigation.replace('GroupDetail', { groupId: id });
+    // Claim a member first (forwards to the group once "me" is set).
+    navigation.replace('ClaimMember', { groupId: id });
   };
 
   const startScan = async () => {

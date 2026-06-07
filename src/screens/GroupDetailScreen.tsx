@@ -133,7 +133,7 @@ export default function GroupDetailScreen({ navigation, route }: Props) {
             {selfNet !== 0 ? <Text style={s.balanceCaption}>{selfNet! > 0 ? "you're owed" : 'you owe'}</Text> : null}
           </>
         ) : (
-          <Pressable onPress={() => navigation.navigate('Members', { groupId })} style={s.claimPrompt} accessibilityRole="button">
+          <Pressable onPress={() => navigation.navigate('ClaimMember', { groupId })} style={s.claimPrompt} accessibilityRole="button">
             <Text style={s.claimText}>Tap to choose which person is you</Text>
           </Pressable>
         )}

@@ -62,3 +62,15 @@ export function currency(code: string): CurrencyInfo {
 export function decimalsFor(code: string): number {
   return currency(code).decimals;
 }
+
+/** The currency's symbol ("$", "€", "¥", or the code itself when letter-style). */
+export function symbolFor(code: string): string {
+  return currency(code).symbol;
+}
+
+/** A compact label pairing the code with its symbol for collapsed displays,
+ *  e.g. "EUR €", "USD $", "SEK kr". Skips the symbol when it equals the code. */
+export function currencyLabel(code: string): string {
+  const info = currency(code);
+  return info.symbol && info.symbol !== info.code ? `${info.code} ${info.symbol}` : info.code;
+}

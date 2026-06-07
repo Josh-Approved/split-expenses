@@ -66,6 +66,7 @@ export default function MembersScreen({ navigation, route }: Props) {
   const updateMember = useGroups((st) => st.updateMember);
   const setHandles = useGroups((st) => st.setHandles);
   const removeMember = useGroups((st) => st.removeMember);
+  const mergeMembers = useGroups((st) => st.mergeMembers);
   const setMe = useGroups((st) => st.setMe);
 
   const menu = useActionMenu();
@@ -107,6 +108,26 @@ export default function MembersScreen({ navigation, route }: Props) {
     });
   };
 
+  // Fold this person into another (the duplicate fix): pick who they really
+  // are; their expenses move over and the duplicate is removed.
+  const mergeFlow = (member: Member) => {
+    const others = members.filter((m) => m.id !== member.id);
+    menu.open({
+      title: `${member.displayName} is really…`,
+      options: others.map((target) => ({
+        label: target.displayName,
+        onPress: () =>
+          confirm.open({
+            title: `Merge ${member.displayName} into ${target.displayName}?`,
+            message: `Everything ${member.displayName} paid or owes moves to ${target.displayName}, and ${member.displayName} is removed. This can’t be undone.`,
+            confirmLabel: 'Merge',
+            destructive: true,
+            onConfirm: () => mergeMembers(groupId, target.id, member.id),
+          }),
+      })),
+    });
+  };
+
   const openMember = (member: Member) => {
     const isMe = member.id === me;
     menu.open({
@@ -128,6 +149,9 @@ export default function MembersScreen({ navigation, route }: Props) {
         },
         { label: 'Payment handles', onPress: () => setEditing(member) },
         { label: 'Color', onPress: () => cycleColor(member) },
+        ...(members.length > 1
+          ? [{ label: 'Merge into another person', onPress: () => mergeFlow(member) }]
+          : []),
         {
           label: 'Remove',
           destructive: true,

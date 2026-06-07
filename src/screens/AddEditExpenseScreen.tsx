@@ -32,6 +32,7 @@ import { useGroups, type NewExpense } from '../store/groups';
 import type { Payer, SplitPart, SplitMethod } from '../data/types';
 import { parseAmount, formatMoney } from '../data/money';
 import { CATEGORIES, category, DEFAULT_CATEGORY } from '../data/categories';
+import { currencyLabel } from '../data/currencies';
 import { useRate } from '../data/fx';
 import { payersTotal } from '../math/split';
 import { activeMembers, memberName, formatDate } from '../lib/format';
@@ -279,7 +280,7 @@ export default function AddEditExpenseScreen({ navigation, route }: Props) {
               accessibilityLabel="Amount"
             />
             <Pressable onPress={() => setPickingCurrency(true)} accessibilityRole="button" accessibilityLabel={`Currency ${currency}`} style={({ pressed }) => [s.currencyChip, pressed && { opacity: 0.6 }]}>
-              <Text style={s.currencyChipText}>{currency}</Text>
+              <Text style={s.currencyChipText}>{currencyLabel(currency)}</Text>
             </Pressable>
           </View>
 

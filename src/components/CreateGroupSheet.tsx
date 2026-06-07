@@ -23,7 +23,7 @@ import { X, Plus } from 'lucide-react-native';
 
 import { useGroups } from '../store/groups';
 import { getSetting, setSetting } from '../store/db';
-import { currency } from '../data/currencies';
+import { currency, currencyLabel } from '../data/currencies';
 import { useTheme, fontFamily, space, radius, target, type as t, hairline, type Colors } from '../theme';
 import { Button } from './ui';
 import { CurrencyPicker } from './CurrencyPicker';
@@ -72,7 +72,10 @@ export function CreateGroupSheet({
     });
 
   const filledNames = names.map((n) => n.trim()).filter(Boolean);
-  const canCreate = name.trim().length > 0 && filledNames.length >= 1;
+  // "Me" is required: you must say which person you are before the group exists,
+  // and that person must have a name.
+  const meChosen = meIndex != null && !!names[meIndex]?.trim();
+  const canCreate = name.trim().length > 0 && filledNames.length >= 1 && meChosen;
 
   const create = () => {
     if (!canCreate) return;
@@ -120,7 +123,7 @@ export function CreateGroupSheet({
 
             <Text style={s.label}>Currency</Text>
             <Pressable onPress={() => setPickingCurrency(true)} accessibilityRole="button" style={({ pressed }) => [s.input, s.currencyRow, pressed && { opacity: 0.6 }]}>
-              <Text style={s.currencyCode}>{base}</Text>
+              <Text style={s.currencyCode}>{currencyLabel(base)}</Text>
               <Text style={s.currencyName}>{currency(base).name}</Text>
             </Pressable>
 
@@ -163,7 +166,11 @@ export function CreateGroupSheet({
               <Text style={s.addRowText}>Add person</Text>
             </Pressable>
 
-            <Text style={s.hint}>Tap “me” to say which person is you on this device. You can change it later.</Text>
+            <Text style={[s.hint, !meChosen && { color: c.appAccent }]}>
+              {meChosen
+                ? 'You can change which person is you later.'
+                : 'Tap “me” next to your own name — required, so your balance is right.'}
+            </Text>
 
             <Button label="Create group" onPress={create} disabled={!canCreate} accent style={{ marginTop: space.s6 }} />
           </ScrollView>

@@ -73,6 +73,10 @@ interface GroupsState {
   updateMember: (groupId: string, memberId: string, patch: Partial<Member>) => void;
   setHandles: (groupId: string, memberId: string, handles: PaymentHandles) => void;
   removeMember: (groupId: string, memberId: string) => void;
+  /** Fold one member (drop) into another (keep): reassign every expense and
+   *  settlement, combining shared rows, then tombstone the duplicate. The fix
+   *  when the same person ends up entered twice. */
+  mergeMembers: (groupId: string, keepId: string, dropId: string) => void;
 
   setMe: (groupId: string, memberId: string) => void;
   getMe: (groupId: string) => string | undefined;
@@ -259,6 +263,49 @@ export const useGroups = create<GroupsState>((set, get) => {
     },
 
     removeMember: (groupId, memberId) => tombstone(groupId, 'members', memberId),
+
+    mergeMembers: (groupId, keepId, dropId) => {
+      if (keepId === dropId) return;
+      const ts = now();
+      mutate(groupId, (g) => {
+        const expenses = g.expenses.map((e) => {
+          if (e.deletedAt != null) return e;
+          const touched =
+            e.payers.some((p) => p.memberId === dropId) ||
+            e.splits.some((sp) => sp.memberId === dropId);
+          if (!touched) return e;
+          const payerMap = new Map<string, number>();
+          for (const p of e.payers) {
+            const id = p.memberId === dropId ? keepId : p.memberId;
+            payerMap.set(id, (payerMap.get(id) ?? 0) + p.amount);
+          }
+          const splitMap = new Map<string, number>();
+          for (const sp of e.splits) {
+            const id = sp.memberId === dropId ? keepId : sp.memberId;
+            splitMap.set(id, (splitMap.get(id) ?? 0) + sp.value);
+          }
+          return {
+            ...e,
+            payers: [...payerMap].map(([memberId, amount]) => ({ memberId, amount })),
+            splits: [...splitMap].map(([memberId, value]) => ({ memberId, value })),
+            updatedAt: ts,
+          };
+        });
+        const settlements = g.settlements.map((st) => {
+          if (st.deletedAt != null) return st;
+          const from = st.fromMember === dropId ? keepId : st.fromMember;
+          const to = st.toMember === dropId ? keepId : st.toMember;
+          if (from === to) return { ...st, deletedAt: ts, updatedAt: ts }; // self-payment → void
+          if (from === st.fromMember && to === st.toMember) return st;
+          return { ...st, fromMember: from, toMember: to, updatedAt: ts };
+        });
+        const members = g.members.map((m) =>
+          m.id === dropId ? { ...m, deletedAt: ts, updatedAt: ts } : m,
+        );
+        return { ...g, expenses, settlements, members };
+      });
+      if (get().me[groupId] === dropId) get().setMe(groupId, keepId);
+    },
 
     setMe: (groupId, memberId) => {
       set((s) => ({ me: { ...s.me, [groupId]: memberId } }));

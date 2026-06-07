@@ -23,6 +23,7 @@ import AnimatedSplash from './src/components/AnimatedSplash';
 
 import GroupsHomeScreen from './src/screens/GroupsHomeScreen';
 import GroupDetailScreen from './src/screens/GroupDetailScreen';
+import ClaimMemberScreen from './src/screens/ClaimMemberScreen';
 import AddEditExpenseScreen from './src/screens/AddEditExpenseScreen';
 import MembersScreen from './src/screens/MembersScreen';
 import SettleUpScreen from './src/screens/SettleUpScreen';
@@ -62,7 +63,9 @@ export default function App() {
       const secret = url ? parseShareLink(url) : null;
       if (!secret) return;
       const groupId = joinShared(secret);
-      const go = () => navRef.isReady() && navRef.navigate('GroupDetail', { groupId });
+      // Land on "Which one are you?" so the joiner claims an existing member
+      // instead of duplicating themselves (it forwards on once "me" is set).
+      const go = () => navRef.isReady() && navRef.navigate('ClaimMember', { groupId });
       if (navRef.isReady()) go();
       else setTimeout(go, 300);
     };
@@ -89,6 +92,7 @@ export default function App() {
           <Stack.Navigator screenOptions={{ headerShown: false, contentStyle: { backgroundColor: c.bg } }}>
             <Stack.Screen name="GroupsHome" component={GroupsHomeScreen} />
             <Stack.Screen name="GroupDetail" component={GroupDetailScreen} />
+            <Stack.Screen name="ClaimMember" component={ClaimMemberScreen} />
             <Stack.Screen name="AddEditExpense" component={AddEditExpenseScreen} options={{ presentation: 'modal' }} />
             <Stack.Screen name="Members" component={MembersScreen} />
             <Stack.Screen name="SettleUp" component={SettleUpScreen} />

@@ -1,3 +1,7 @@
+// Must be first: gives tweetnacl/@noble a CSPRNG (crypto.getRandomValues) on
+// React Native before any sync crypto runs. Without it, minting a share secret
+// throws "no PRNG" and the Share screen crashes.
+import 'react-native-get-random-values';
 import { registerRootComponent } from 'expo';
 
 import App from './App';
