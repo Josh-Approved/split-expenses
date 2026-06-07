@@ -13,7 +13,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, Pressable, Switch, StyleSheet, Linking, Platform } from 'react-native';
+import { View, Text, ScrollView, Pressable, Switch, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import {
@@ -28,51 +28,25 @@ import {
   Download,
   Upload,
 } from 'lucide-react-native';
-import Constants from 'expo-constants';
-
 import type { RootStackParamList } from '../navigation';
 import { getSetting, setSetting } from '../store/db';
 import { exportAllGroups, importGroupsFromFile } from '../lib/transfer';
 import { enableReminders, disableReminders } from '../lib/reminders';
+import {
+  BMAC_URL,
+  STUDIO_URL,
+  REPO_URL,
+  PRIVACY_URL,
+  versionLabel,
+  openUrl,
+  openFeedbackMail,
+  openReview,
+} from '../lib/links';
 import { useTheme, fontFamily, space, radius, target, type as t, hairline, type Colors } from '../theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Settings'>;
 
-// Canonical external links (mirrors grocery-list/src/lib/links.ts).
-const BMAC_URL = 'https://buymeacoffee.com/jtysonwilliams'; // from DonationModal
-const STUDIO_URL = 'https://joshapproved.com';
-const REPO_URL = 'https://github.com/Josh-Approved/split-expenses';
-const PRIVACY_URL = 'https://github.com/Josh-Approved/split-expenses/blob/main/PRIVACY.md';
-const FEEDBACK_EMAIL = 'info@joshapproved.com';
-
-// TODO: fill the numeric App Store Connect id once the ASC record exists. Empty
-// is the known pre-store state; the review deep link no-ops cleanly until then.
-const IOS_APP_STORE_ID = '';
-const ANDROID_PACKAGE = 'com.joshapproved.splitexpenses';
-
 const REMINDERS_KEY = 'reminders_enabled';
-
-function versionLabel(): string {
-  const v = Constants.expoConfig?.version ?? '1.0.0';
-  return v;
-}
-
-function openUrl(url: string) {
-  Linking.openURL(url).catch(() => {});
-}
-
-function openFeedbackMail() {
-  const subject = encodeURIComponent(`Split Expenses ${versionLabel()}`);
-  openUrl(`mailto:${FEEDBACK_EMAIL}?subject=${subject}`);
-}
-
-function openReview() {
-  const url =
-    Platform.OS === 'ios'
-      ? `itms-apps://apps.apple.com/app/id${IOS_APP_STORE_ID}?action=write-review`
-      : `https://play.google.com/store/apps/details?id=${ANDROID_PACKAGE}&showAllReviews=true`;
-  openUrl(url);
-}
 
 export default function SettingsScreen({ navigation }: Props) {
   const { c } = useTheme();
@@ -191,7 +165,7 @@ export default function SettingsScreen({ navigation }: Props) {
         {/* ---- About (canonical) ------------------------------------- */}
         <Text style={s.sectionLabel}>About</Text>
         <View style={s.card}>
-          <AboutRow c={c} s={s} icon={HandHeart} label="Buy Me a Coffee" onPress={() => openUrl(BMAC_URL)} first />
+          <AboutRow c={c} s={s} icon={HandHeart} label="Support this app" onPress={() => openUrl(BMAC_URL)} first />
           <AboutRow c={c} s={s} icon={Mail} label="Send feedback" onPress={openFeedbackMail} />
           <AboutRow c={c} s={s} icon={Star} label="Leave a review" onPress={openReview} />
           <AboutRow c={c} s={s} icon={Shield} label="Privacy policy" onPress={() => openUrl(PRIVACY_URL)} />

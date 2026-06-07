@@ -17,10 +17,10 @@
  *   { result: "success", base_code: "USD",
  *     rates: { EUR: 0.92, ... }, time_last_update_unix: 1700000000 }
  *
- * Everything here is best-effort and crash-proof: getRate() ALWAYS resolves to
+ * Everything here is best-effort and crash-proof: rate resolution ALWAYS yields
  * a usable number, falling back through manual override → live → cache → 1.0.
- * The error, if any, is surfaced out-of-band via `lastRateError` and the
- * `source` field of useRate(), never thrown at the UI.
+ * A failure is surfaced out-of-band via the `source` field of useRate()
+ * ("fallback"), never thrown at the UI.
  */
 
 import { useEffect, useState } from 'react';
@@ -71,13 +71,6 @@ let memTable: CachedTable | null = null;
  *  label a rate 'live' vs 'cached'. Reset whenever we load from disk. */
 let memIsLive = false;
 
-/**
- * The most recent failure to refresh rates, or null if the last attempt
- * succeeded (or we've never needed the network). The UI can read this to show
- * a quiet "rates may be stale / offline" hint — getRate never throws it.
- */
-export let lastRateError: Error | null = null;
-
 /** De-dupe concurrent fetches: many expenses converting at once should share
  *  one in-flight request, not stampede the endpoint. */
 let inFlight: Promise<CachedTable | null> | null = null;
@@ -112,7 +105,8 @@ function isFresh(table: CachedTable | null): boolean {
 /**
  * Fetch the whole USD table from the network. Resolves to a CachedTable on
  * success, or null on any failure (network, non-200, malformed body, API-level
- * `result !== "success"`). Records the failure in `lastRateError`. Never throws.
+ * `result !== "success"`). The failure is reflected to the UI out-of-band via
+ * the `source` flag from `useRate` ("fallback"). Never throws.
  */
 async function fetchTable(): Promise<CachedTable | null> {
   try {
@@ -125,11 +119,8 @@ async function fetchTable(): Promise<CachedTable | null> {
     if (body.result !== 'success' || !body.rates || !body.rates.USD) {
       throw new Error('FX response missing rates');
     }
-    const table: CachedTable = { rates: body.rates, fetchedAt: Date.now() };
-    lastRateError = null;
-    return table;
-  } catch (err) {
-    lastRateError = err instanceof Error ? err : new Error(String(err));
+    return { rates: body.rates, fetchedAt: Date.now() };
+  } catch {
     return null;
   }
 }
@@ -234,43 +225,13 @@ export async function getManualRate(
 /* ---- public API ------------------------------------------------------ */
 
 /**
- * Units of `toCode` per 1 unit of `fromCode`, in MAJOR units — feed straight
- * into money.ts `convertOne` / `convertPreservingSum`. E.g. getRate('EUR',
- * 'USD') ≈ 1.08.
- *
- * Resolution order: manual override → live/cached table → 1.0 fallback. ALWAYS
- * resolves to a finite number; never throws. When it has to fall back to 1.0
- * for lack of data, `lastRateError` will be set so the UI can warn.
- */
-export async function getRate(fromCode: string, toCode: string): Promise<number> {
-  if (fromCode === toCode) return 1;
-
-  // A manual override always wins — it's an explicit user decision.
-  const manual = await getManualRate(fromCode, toCode);
-  if (manual != null) return manual;
-
-  const table = await ensureTable();
-  if (table) {
-    const r = crossRate(table, fromCode, toCode);
-    if (r != null) return r;
-  }
-
-  // Truly no data for this pair (offline first run, or unknown code). Return a
-  // safe identity so the UI renders a number; lastRateError flags the gap.
-  if (!lastRateError) {
-    lastRateError = new Error(`No FX rate for ${fromCode}→${toCode}`);
-  }
-  return 1;
-}
-
-/**
  * Synchronous rate read from the in-memory table, for render paths that can't
  * await (list rows, totals). Returns null if no table is loaded yet OR the pair
  * can't be derived — callers should treat null as "not ready / unknown" and
  * fall back to a stored expense.rate or kick off prefetchRates().
  *
  * Note: this does NOT consult manual overrides (those are async-persisted).
- * Use getRate() / useRate() where override-awareness matters.
+ * Use useRate() where override-awareness matters.
  */
 export function getRateSync(fromCode: string, toCode: string): number | null {
   if (fromCode === toCode) return 1;

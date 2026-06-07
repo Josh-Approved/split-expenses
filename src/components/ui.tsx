@@ -71,7 +71,6 @@ export function Button({
   variant = 'primary',
   disabled,
   loading,
-  accent,
   style,
 }: {
   label: string;
@@ -79,29 +78,14 @@ export function Button({
   variant?: 'primary' | 'ghost' | 'danger';
   disabled?: boolean;
   loading?: boolean;
-  /** Use the per-app accent as the button fill (e.g. Add expense). */
-  accent?: boolean;
   style?: StyleProp<ViewStyle>;
 }) {
   const { c } = useTheme();
   const s = makeStyles(c);
-  const isInk = variant === 'primary' && !accent;
-  const bg =
-    variant === 'ghost'
-      ? 'transparent'
-      : variant === 'danger'
-        ? c.dangerBg
-        : accent
-          ? c.appAccent
-          : c.inkButton;
-  const fg =
-    variant === 'ghost'
-      ? c.fg
-      : variant === 'danger'
-        ? c.danger
-        : accent
-          ? c.fgOnAccent
-          : c.inkButtonText;
+  // Primary CTAs are always ink-on-paper (design system § Color: the per-app
+  // accent is never a CTA fill).
+  const bg = variant === 'ghost' ? 'transparent' : variant === 'danger' ? c.dangerBg : c.inkButton;
+  const fg = variant === 'ghost' ? c.fg : variant === 'danger' ? c.danger : c.inkButtonText;
   return (
     <Pressable
       onPress={onPress}

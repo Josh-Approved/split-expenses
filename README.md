@@ -27,6 +27,23 @@ accounts. Your data stays with you.
 
 iOS and Android, full parity — every action works the same on both.
 
+## How to get it
+
+Coming soon to the App Store and Google Play. Until then, the source is here and
+there's a page at [joshapproved.com/apps/split-expenses](https://joshapproved.com/apps/split-expenses).
+
+## Run it locally
+
+```bash
+git clone https://github.com/Josh-Approved/split-expenses
+cd split-expenses
+npm install
+npx expo run:ios      # or: npx expo run:android
+```
+
+It's an Expo app, so you'll need the Expo / React Native toolchain (Xcode for
+iOS, Android Studio for Android). `npm test` runs the split-math unit tests.
+
 ## Built with
 
 React Native + Expo. The shared-group sync uses end-to-end encryption over free,
@@ -37,6 +54,11 @@ public relays; balances are derived on each device and never stored or synced.
 See [PRIVACY.md](PRIVACY.md). Short version: there's no account and no server
 holding your data — your groups live on your phone, and a shared group is passed
 encrypted through public drop boxes we don't run and can't read.
+
+## Feedback
+
+Found a bug or want something? Email **feedback@joshapproved.com**, or open an
+issue. If the app's useful to you, you can [support it](https://buymeacoffee.com/jtysonwilliams) — pay what you want, nothing required.
 
 ## License
 

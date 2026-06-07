@@ -172,7 +172,7 @@ export function CreateGroupSheet({
                 : 'Tap “me” next to your own name — required, so your balance is right.'}
             </Text>
 
-            <Button label="Create group" onPress={create} disabled={!canCreate} accent style={{ marginTop: space.s6 }} />
+            <Button label="Create group" onPress={create} disabled={!canCreate} style={{ marginTop: space.s6 }} />
           </ScrollView>
         </View>
       </KeyboardAvoidingView>

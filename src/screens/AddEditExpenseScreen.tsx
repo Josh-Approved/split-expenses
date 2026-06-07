@@ -430,7 +430,6 @@ export default function AddEditExpenseScreen({ navigation, route }: Props) {
             label={isEdit ? 'Save changes' : 'Add expense'}
             onPress={onSave}
             disabled={!canSave}
-            accent
             style={{ marginTop: space.s6 }}
           />
         </ScrollView>

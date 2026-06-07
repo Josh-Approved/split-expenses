@@ -163,7 +163,7 @@ export default function GroupDetailScreen({ navigation, route }: Props) {
         accessibilityLabel="Add expense"
         style={({ pressed }) => [s.fab, { bottom: insets.bottom + space.s5 }, pressed && { opacity: 0.85 }]}
       >
-        <Plus size={22} color={c.fgOnAccent} />
+        <Plus size={22} color={c.inkButtonText} />
         <Text style={s.fabText}>Add expense</Text>
       </Pressable>
 
@@ -241,16 +241,16 @@ function makeStyles(c: Colors) {
       flexDirection: 'row',
       alignItems: 'center',
       gap: space.s3,
-      backgroundColor: c.appAccent,
+      backgroundColor: c.inkButton,
       borderRadius: radius.pill,
       paddingHorizontal: space.s6,
       height: 52,
-      shadowColor: '#000',
-      shadowOpacity: 0.18,
+      shadowColor: c.fg,
+      shadowOpacity: 0.12,
       shadowRadius: 8,
       shadowOffset: { width: 0, height: 3 },
       elevation: 4,
     },
-    fabText: { ...t.base, fontFamily: fontFamily.sansSemibold, color: c.fgOnAccent },
+    fabText: { ...t.base, fontFamily: fontFamily.sansSemibold, color: c.inkButtonText },
   });
 }

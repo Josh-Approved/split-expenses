@@ -42,21 +42,14 @@ export function ensureNotificationHandler(): void {
 }
 
 async function ensureAndroidChannel(): Promise<void> {
-  if (Platform.OS !== 'android') return;
-  await Notifications.setNotificationChannelAsync(ANDROID_CHANNEL_ID, {
-    name: 'Settle-up reminders',
-    importance: Notifications.AndroidImportance.DEFAULT,
-    sound: undefined,
-  });
-}
-
-/** True if our recurring reminder is currently scheduled. */
-export async function areRemindersScheduled(): Promise<boolean> {
-  try {
-    const scheduled = await Notifications.getAllScheduledNotificationsAsync();
-    return scheduled.length > 0;
-  } catch {
-    return false;
+  // Android requires a notification channel; iOS has no equivalent. This only
+  // sets up the channel — the reminder feature itself runs on both platforms.
+  if (Platform.OS === 'android') {
+    await Notifications.setNotificationChannelAsync(ANDROID_CHANNEL_ID, {
+      name: 'Settle-up reminders',
+      importance: Notifications.AndroidImportance.DEFAULT,
+      sound: undefined,
+    });
   }
 }
 

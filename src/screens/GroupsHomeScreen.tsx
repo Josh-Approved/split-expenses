@@ -18,6 +18,7 @@ import { useTheme, fontFamily, space, radius, type as t, hairline, type Colors }
 import { Avatar, Card, EmptyState, Divider } from '../components/ui';
 import { useActionMenu, usePrompt, useConfirm } from '../components/Dialogs';
 import { CreateGroupSheet } from '../components/CreateGroupSheet';
+import { FundingFooter } from '../components/FundingFooter';
 import type { Group } from '../data/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'GroupsHome'>;
@@ -102,6 +103,7 @@ export default function GroupsHomeScreen({ navigation }: Props) {
             message="Make a group for a trip, a house, or a couple — then start adding what people pay for."
           />
         }
+        ListFooterComponent={sorted.length > 0 ? <FundingFooter /> : null}
         renderItem={({ item }) => {
           const meId = me[item.id];
           const members = activeMembers(item);
@@ -157,7 +159,7 @@ export default function GroupsHomeScreen({ navigation }: Props) {
         accessibilityLabel="New group"
         style={({ pressed }) => [s.fab, { bottom: insets.bottom + space.s5 }, pressed && s.pressed]}
       >
-        <Plus size={26} color={c.fgOnAccent} />
+        <Plus size={26} color={c.inkButtonText} />
       </Pressable>
 
       <CreateGroupSheet
@@ -201,11 +203,11 @@ function makeStyles(c: Colors) {
       width: 56,
       height: 56,
       borderRadius: 28,
-      backgroundColor: c.appAccent,
+      backgroundColor: c.inkButton,
       alignItems: 'center',
       justifyContent: 'center',
-      shadowColor: '#000',
-      shadowOpacity: 0.18,
+      shadowColor: c.fg,
+      shadowOpacity: 0.12,
       shadowRadius: 8,
       shadowOffset: { width: 0, height: 3 },
       elevation: 4,
