@@ -2,7 +2,7 @@
 export type RootStackParamList = {
   GroupsHome: undefined;
   GroupDetail: { groupId: string };
-  ClaimMember: { groupId: string };
+  ClaimMember: { groupId: string; change?: boolean };
   AddEditExpense: { groupId: string; expenseId?: string };
   Members: { groupId: string };
   SettleUp: { groupId: string };

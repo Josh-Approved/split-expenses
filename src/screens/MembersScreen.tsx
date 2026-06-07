@@ -67,7 +67,6 @@ export default function MembersScreen({ navigation, route }: Props) {
   const setHandles = useGroups((st) => st.setHandles);
   const removeMember = useGroups((st) => st.removeMember);
   const mergeMembers = useGroups((st) => st.mergeMembers);
-  const setMe = useGroups((st) => st.setMe);
 
   const menu = useActionMenu();
   const prompt = usePrompt();
@@ -128,35 +127,15 @@ export default function MembersScreen({ navigation, route }: Props) {
     });
   };
 
+  const meName = members.find((m) => m.id === me)?.displayName;
+
   const openMember = (member: Member) => {
-    const isMe = member.id === me;
     menu.open({
       title: member.displayName,
       options: [
-        ...(isMe
-          ? []
-          : [
-              {
-                // First claim is a direct tap; switching away from an existing
-                // "me" is deliberate + confirmed (it changes whose balance this
-                // device shows, and never moves past entries).
-                label: me ? 'Make this person me instead' : 'This is me',
-                onPress: () => {
-                  if (!me) {
-                    setMe(groupId, member.id);
-                    return;
-                  }
-                  const currentName =
-                    members.find((m) => m.id === me)?.displayName ?? 'someone else';
-                  confirm.open({
-                    title: `Make ${member.displayName} you?`,
-                    message: `You're set as ${currentName} on this device. This only changes which person is you here — ${currentName}'s expenses stay with ${currentName}.`,
-                    confirmLabel: "Yes, that's me",
-                    onConfirm: () => setMe(groupId, member.id),
-                  });
-                },
-              },
-            ]),
+        // Identity ("who you are") is not set per-member here — that lives in
+        // the single "Change who I am" flow, so there's no way to casually
+        // re-point yourself at an arbitrary person. See § identity.
         {
           label: 'Rename',
           onPress: () =>
@@ -206,6 +185,20 @@ export default function MembersScreen({ navigation, route }: Props) {
         keyExtractor={(m) => m.id}
         contentContainerStyle={{ padding: space.s5, paddingBottom: insets.bottom + space.s7 }}
         ListEmptyComponent={<EmptyState title="No one here yet" message="Add the people sharing these expenses." />}
+        ListHeaderComponent={
+          <Pressable
+            onPress={() => navigation.navigate('ClaimMember', { groupId, change: true })}
+            accessibilityRole="button"
+            accessibilityLabel={meName ? `You are ${meName}. Change who you are` : 'Set who you are'}
+            style={({ pressed }) => [s.identityRow, pressed && s.pressed]}
+          >
+            <View style={{ flex: 1 }}>
+              <Text style={s.identityLabel}>{meName ? 'You are' : 'Set who you are'}</Text>
+              {meName ? <Text style={s.identityName}>{meName}</Text> : null}
+            </View>
+            <Text style={s.identityChevron}>›</Text>
+          </Pressable>
+        }
         renderItem={({ item }) => {
           const isMe = item.id === me;
           const hint = handlesHint(item.handles);
@@ -392,6 +385,21 @@ function makeStyles(c: Colors) {
     topbar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: space.s4, paddingVertical: space.s3, gap: space.s2 },
     topTitle: { ...t.md, fontFamily: fontFamily.sansSemibold, color: c.fg, flex: 1 },
 
+    identityRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: space.s4,
+      paddingVertical: space.s4,
+      paddingHorizontal: space.s5,
+      marginBottom: space.s4,
+      borderRadius: radius.lg,
+      borderWidth: hairline,
+      borderColor: c.hairline,
+      backgroundColor: c.bgElevated,
+    },
+    identityLabel: { ...t.sm, fontFamily: fontFamily.sans, color: c.fgMuted },
+    identityName: { ...t.base, fontFamily: fontFamily.sansSemibold, color: c.fg, marginTop: 1 },
+    identityChevron: { ...t.md, fontFamily: fontFamily.sans, color: c.fgSubtle },
     memberRow: {
       flexDirection: 'row',
       alignItems: 'center',

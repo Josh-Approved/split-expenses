@@ -35,17 +35,22 @@ export default function ClaimMemberScreen({ navigation, route }: Props) {
   const prompt = usePrompt();
 
   const members = group ? activeMembers(group) : [];
+  // `change` mode = the deliberate "Change who I am" correction (reached from
+  // Members), so we must NOT auto-skip even though "me" is already set.
+  const change = route.params.change === true;
 
-  // If "me" is already set (e.g. a group you created), skip straight in.
+  // On join, if "me" is already set (e.g. a group you created, or a re-pair),
+  // skip straight in. Never skip in change mode.
   useEffect(() => {
-    if (meId) navigation.replace('GroupDetail', { groupId });
-  }, [meId, groupId, navigation]);
+    if (meId && !change) navigation.replace('GroupDetail', { groupId });
+  }, [meId, change, groupId, navigation]);
 
-  const goToGroup = () => navigation.replace('GroupDetail', { groupId });
+  // Join lands you in the group; an explicit change just returns you back.
+  const done = () => (change ? navigation.goBack() : navigation.replace('GroupDetail', { groupId }));
 
   const claim = (memberId: string) => {
     setMe(groupId, memberId);
-    goToGroup();
+    done();
   };
 
   const addSelf = () =>
@@ -57,17 +62,17 @@ export default function ClaimMemberScreen({ navigation, route }: Props) {
       onSubmit: (name) => {
         const id = addMember(groupId, name);
         setMe(groupId, id);
-        goToGroup();
+        done();
       },
     });
 
   return (
     <View style={[s.screen, { paddingTop: insets.top + space.s5 }]}>
       <Text style={s.title} accessibilityRole="header">
-        Which one are you?
+        {change ? 'Change who you are' : 'Which one are you?'}
       </Text>
       <Text style={s.subtitle}>
-        Pick yourself from the people in {group?.name ?? 'this group'} so your balance is yours. Tap the wrong one? You can change it later.
+        Pick yourself from the people in {group?.name ?? 'this group'} so your balance is yours. This only changes which person is you on this device — it never moves anyone’s expenses.
       </Text>
 
       {members.length === 0 ? (
@@ -92,6 +97,7 @@ export default function ClaimMemberScreen({ navigation, route }: Props) {
             >
               <Avatar name={item.displayName} color={item.color} emoji={item.emoji} size={40} />
               <Text style={s.rowName}>{item.displayName}</Text>
+              {item.id === meId ? <Text style={s.youNow}>you now</Text> : null}
             </Pressable>
           )}
           ListFooterComponent={
@@ -102,8 +108,8 @@ export default function ClaimMemberScreen({ navigation, route }: Props) {
         />
       )}
 
-      <Pressable onPress={goToGroup} accessibilityRole="button" style={({ pressed }) => [s.skip, pressed && { opacity: 0.6 }]}>
-        <Text style={s.skipText}>Skip for now</Text>
+      <Pressable onPress={done} accessibilityRole="button" style={({ pressed }) => [s.skip, pressed && { opacity: 0.6 }]}>
+        <Text style={s.skipText}>{change ? 'Cancel' : 'Skip for now'}</Text>
       </Pressable>
       {prompt.element}
     </View>
@@ -126,7 +132,17 @@ function makeStyles(c: Colors) {
       borderBottomWidth: hairline,
       borderBottomColor: c.hairline,
     },
-    rowName: { ...t.md, fontFamily: fontFamily.sansMedium, color: c.fg },
+    rowName: { ...t.md, fontFamily: fontFamily.sansMedium, color: c.fg, flex: 1 },
+    youNow: {
+      ...t.xs,
+      fontFamily: fontFamily.sansSemibold,
+      color: c.appAccent,
+      backgroundColor: c.appAccentBg,
+      paddingHorizontal: space.s3,
+      paddingVertical: 2,
+      borderRadius: radius.pill,
+      overflow: 'hidden',
+    },
     newRow: { minHeight: target.min, justifyContent: 'center', paddingVertical: space.s5 },
     newRowText: { ...t.base, fontFamily: fontFamily.sansSemibold, color: c.appAccent },
     ghostBtn: { minHeight: target.min, justifyContent: 'center', paddingHorizontal: space.s6 },
