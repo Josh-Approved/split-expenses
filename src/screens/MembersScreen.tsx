@@ -135,7 +135,28 @@ export default function MembersScreen({ navigation, route }: Props) {
       options: [
         ...(isMe
           ? []
-          : [{ label: 'This is me', onPress: () => setMe(groupId, member.id) }]),
+          : [
+              {
+                // First claim is a direct tap; switching away from an existing
+                // "me" is deliberate + confirmed (it changes whose balance this
+                // device shows, and never moves past entries).
+                label: me ? 'Make this person me instead' : 'This is me',
+                onPress: () => {
+                  if (!me) {
+                    setMe(groupId, member.id);
+                    return;
+                  }
+                  const currentName =
+                    members.find((m) => m.id === me)?.displayName ?? 'someone else';
+                  confirm.open({
+                    title: `Make ${member.displayName} you?`,
+                    message: `You're set as ${currentName} on this device. This only changes which person is you here — ${currentName}'s expenses stay with ${currentName}.`,
+                    confirmLabel: "Yes, that's me",
+                    onConfirm: () => setMe(groupId, member.id),
+                  });
+                },
+              },
+            ]),
         {
           label: 'Rename',
           onPress: () =>

@@ -32,7 +32,7 @@ import { useGroups, type NewExpense } from '../store/groups';
 import type { Payer, SplitPart, SplitMethod } from '../data/types';
 import { parseAmount, formatMoney } from '../data/money';
 import { CATEGORIES, category, DEFAULT_CATEGORY } from '../data/categories';
-import { currencyLabel } from '../data/currencies';
+import { currencyLabel, symbolFor, decimalsFor } from '../data/currencies';
 import { useRate } from '../data/fx';
 import { payersTotal } from '../math/split';
 import { activeMembers, memberName, formatDate } from '../lib/format';
@@ -104,6 +104,22 @@ export default function AddEditExpenseScreen({ navigation, route }: Props) {
   const effectiveRate = !foreign ? 1 : manualRate ?? fx.rate;
 
   const amountMinor = parseAmount(amountText, currency) ?? 0;
+
+  // The amount field accepts numbers only: strip anything that isn't a digit or
+  // a single decimal separator, normalize comma → dot, and cap the fractional
+  // digits to this currency's decimals (so JPY can't take cents).
+  const onChangeAmount = (text: string) => {
+    const decimals = decimalsFor(currency);
+    const parts = text.replace(/[^0-9.,]/g, '').replace(/,/g, '.').split('.');
+    let next = parts[0];
+    if (decimals > 0 && parts.length > 1) {
+      next += '.' + parts.slice(1).join('').slice(0, decimals);
+    }
+    setAmountText(next);
+  };
+
+  // Placeholder shows the formatted zero for this currency: "0.00", "0" (JPY).
+  const zeroPlaceholder = (0).toFixed(decimalsFor(currency));
 
   // When the amount changes and there's exactly one payer, keep them paying the
   // full new amount (the fast path: "I paid for it").
@@ -269,11 +285,14 @@ export default function AddEditExpenseScreen({ navigation, route }: Props) {
         <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + space.s9 }} keyboardShouldPersistTaps="handled">
           {/* Amount — the hero input */}
           <View style={s.amountRow}>
+            <Text style={s.amountSymbol} allowFontScaling={false}>
+              {symbolFor(currency)}
+            </Text>
             <TextInput
               style={s.amountInput}
               value={amountText}
-              onChangeText={setAmountText}
-              placeholder="0"
+              onChangeText={onChangeAmount}
+              placeholder={zeroPlaceholder}
               placeholderTextColor={c.fgSubtle}
               keyboardType="decimal-pad"
               autoFocus={!isEdit}
@@ -454,8 +473,10 @@ export default function AddEditExpenseScreen({ navigation, route }: Props) {
 /** Show an existing minor-unit amount as an editable plain string, or '' for 0. */
 function formatMinorOrEmpty(minor: number, code: string): string {
   if (minor === 0) return '';
-  const { formatMinorPlain } = require('../data/money') as typeof import('../data/money');
-  return formatMinorPlain(minor, code);
+  // Plain, no thousands separators, so the numeric field round-trips cleanly
+  // through the digit-only input handler when editing.
+  const decimals = decimalsFor(code);
+  return (minor / Math.pow(10, decimals)).toFixed(decimals);
 }
 
 function makeStyles(c: Colors) {
@@ -465,7 +486,14 @@ function makeStyles(c: Colors) {
     header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: space.s4 },
     title: { ...t.md, fontFamily: fontFamily.sansSemibold, color: c.fg },
 
-    amountRow: { flexDirection: 'row', alignItems: 'center', gap: space.s4, paddingVertical: space.s4 },
+    amountRow: { flexDirection: 'row', alignItems: 'center', gap: space.s3, paddingVertical: space.s4 },
+    amountSymbol: {
+      fontSize: 40,
+      lineHeight: 46,
+      fontFamily: fontFamily.sansSemibold,
+      letterSpacing: -0.5,
+      color: c.fgMuted,
+    },
     amountInput: {
       flex: 1,
       fontSize: 40,
