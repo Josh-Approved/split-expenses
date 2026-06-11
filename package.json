@@ -22,6 +22,7 @@
     "expo-sqlite": "~56.0.4",
     "expo-status-bar": "~56.0.4",
     "expo-system-ui": "~56.0.5",
+    "expo-updates": "~56.0.19",
     "lucide-react-native": "^1.17.0",
     "react": "19.2.3",
     "react-native": "0.85.3",
@@ -57,5 +58,22 @@
       "node_modules/(?!((jest-)?react-native|@react-native(-community)?|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@unimodules/.*|unimodules|sentry-expo|native-base|react-native-svg))"
     ]
   },
-  "private": true
+  "private": true,
+  "expo": {
+    "install": {
+      "exclude": [
+        "@types/jest",
+        "expo",
+        "expo-camera",
+        "expo-file-system",
+        "expo-font",
+        "expo-image-picker",
+        "expo-linking",
+        "expo-notifications",
+        "expo-sharing",
+        "expo-sqlite",
+        "jest-expo"
+      ]
+    }
+  }
 }
