@@ -30,8 +30,11 @@ import SettleUpScreen from './src/screens/SettleUpScreen';
 import ShareScreen from './src/screens/ShareScreen';
 import SettingsScreen from './src/screens/SettingsScreen';
 import Credits from './src/components/Credits';
+import { QA_MODE } from './src/qa/qaMode';
 
-SplashScreen.preventAutoHideAsync().catch(() => {});
+// Under QA_MODE the capture harness wants a deterministic first frame: skip the
+// native splash hold and the animated splash so screenshots aren't of a splash.
+if (!QA_MODE) SplashScreen.preventAutoHideAsync().catch(() => {});
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 export const navRef = createNavigationContainerRef<RootStackParamList>();
@@ -89,7 +92,7 @@ export default function App() {
     <SafeAreaProvider>
       {ready && (
         <NavigationContainer ref={navRef} theme={themed}>
-          <Stack.Navigator screenOptions={{ headerShown: false, contentStyle: { backgroundColor: c.bg } }}>
+          <Stack.Navigator screenOptions={{ headerShown: false, contentStyle: { backgroundColor: c.bg }, animation: QA_MODE ? 'none' : undefined }}>
             <Stack.Screen name="GroupsHome" component={GroupsHomeScreen} />
             <Stack.Screen name="GroupDetail" component={GroupDetailScreen} />
             <Stack.Screen name="ClaimMember" component={ClaimMemberScreen} />
@@ -104,7 +107,7 @@ export default function App() {
           </Stack.Navigator>
         </NavigationContainer>
       )}
-      {!splashDone && <AnimatedSplash ready={ready} onFinish={() => setSplashDone(true)} />}
+      {!QA_MODE && !splashDone && <AnimatedSplash ready={ready} onFinish={() => setSplashDone(true)} />}
       <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
     </SafeAreaProvider>
   );

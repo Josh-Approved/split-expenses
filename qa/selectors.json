@@ -1,0 +1,12 @@
+{
+  "$comment": "Selector registry for split-expenses — the ONE place brittle UI strings live. Flows reference @keys, never raw copy. text = Maestro regex (full-match against visible text OR a11y label); testID preferred when an anchor churns. Anchors target the seeded 'Lisbon trip' group (src/qa/fixtures.ts).",
+  "anchors": {
+    "home-title":        { "text": "Groups", "note": "GroupsHome header (accessibilityRole header)." },
+    "first-group":       { "text": "Lisbon trip.*", "note": "the seeded QA group card. Wrapped with .* because the card merges name+balance into one a11y label ('Lisbon trip, you're owed ...'); Maestro full-matches the regex, so bare 'Lisbon trip' never matches the card." },
+    "add-expense":       { "text": "Add expense", "note": "the detail-screen FAB (a11y 'Add expense'); also the editor's save Button label, so it's the waypoint both for opening the editor and for confirming we're back on detail." },
+    "new-expense-title": { "text": "New expense", "note": "AddEditExpense header in CREATE mode." },
+    "amount-input":      { "text": "Amount", "note": "the hero amount TextInput (a11y label 'Amount'). Tap to focus before typing." },
+    "added-expense":     { "text": ".*\\$42\\.00.*", "note": "OUTCOME anchor — the $42 expense added in-flow (amount only, no seeded expense is $42.00). assertNot before the add, assert after = the core add action actually landed on both platforms. Wrapped in .* because iOS merges the expense row's children into one a11y label ('General, Alex paid · split 4 ways · Today, $42.00') and Maestro full-matches the regex — a bare '\\$42\\.00' never matches the merged label (Android exposes the amount as its own node, so it passed there). Same .* convention as @first-group." },
+    "desc-label":        { "text": "Description", "note": "static form label inside the AddEditExpense ScrollView (keyboardShouldPersistTaps='handled'). Tapped to dismiss the keyboard cross-platform before the 'editor' screenshot — Maestro's hideKeyboard is unreliable on iOS (custom numeric input has no standard dismiss action)." }
+  }
+}

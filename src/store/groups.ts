@@ -32,6 +32,8 @@ import {
   loadDeviceState,
   setDeviceMe,
 } from './db';
+import { QA_MODE } from '../qa/qaMode';
+import { qaSeed } from '../qa/fixtures';
 
 const now = () => Date.now();
 
@@ -155,6 +157,14 @@ export const useGroups = create<GroupsState>((set, get) => {
     hydrated: false,
 
     hydrate: async () => {
+      // QA_MODE (compile-time constant) seeds deterministic fixtures so the
+      // capture pipeline boots a populated, screenshot-ready ledger. Tree-shaken
+      // out of production builds.
+      if (QA_MODE) {
+        const seed = qaSeed();
+        set({ groups: seed.groups, me: seed.me, hydrated: true });
+        return;
+      }
       const [groups, me] = await Promise.all([loadAllGroups(), loadDeviceState()]);
       set({ groups, me: Object.fromEntries(me), hydrated: true });
     },

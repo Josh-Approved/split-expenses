@@ -1,0 +1,16 @@
+{
+  "anchors": {
+    "first-group": {
+      "text": "Lisbon trip",
+      "id": null
+    },
+    "add-expense": {
+      "text": "Add expense",
+      "id": null
+    },
+    "added-expense": {
+      "text": ", $42.00",
+      "id": null
+    }
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "$comment": "split-expenses screenshot traversal + Tier-2 outcome assertion, copy-free. Source of truth for qa/flows/mobile.yaml (GENERATED — run scripts/qa/compile-flow.mjs; never hand-edit the yaml). Screenshot names match qa/screenshots.config.json sources (list -> groups home, detail -> core balance+feed, editor). The outcome assertion pins the hero add action: a $42 expense absent before the add is visible after it, on both platforms.",
+  "appId": "com.joshapproved.splitexpenses",
+  "clearState": true,
+  "diagnosticLaunchShot": true,
+  "settleMs": 8000,
+  "steps": [
+    { "waitFor": "@home-title", "timeout": 30000 },
+    { "waitFor": "@first-group", "timeout": 15000 },
+    { "screenshot": "list" },
+
+    { "tap": "@first-group" },
+    { "waitFor": "@add-expense", "timeout": 10000 },
+    { "screenshot": "detail" },
+
+    { "assertNot": "@added-expense" },
+    { "tap": "@add-expense" },
+    { "waitFor": "@new-expense-title", "timeout": 10000 },
+    { "tap": "@amount-input" },
+    { "type": "42" },
+    { "tap": "@desc-label" },
+    { "screenshot": "editor" },
+    { "tap": "@add-expense" },
+    { "waitFor": "@add-expense", "timeout": 10000 },
+    { "assert": "@added-expense" }
+  ]
+}
