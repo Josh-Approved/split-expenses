@@ -11,7 +11,8 @@
       "bundleIdentifier": "com.joshapproved.splitexpenses",
       "buildNumber": "1",
       "infoPlist": {
-        "ITSAppUsesNonExemptEncryption": false
+        "ITSAppUsesNonExemptEncryption": false,
+        "CFBundleName": "Split Expenses"
       }
     },
     "android": {
@@ -23,10 +24,7 @@
       "package": "com.joshapproved.splitexpenses",
       "versionCode": 1,
       "permissions": [
-        "android.permission.CAMERA",
-        "android.permission.RECORD_AUDIO",
-        "android.permission.CAMERA",
-        "android.permission.RECORD_AUDIO"
+        "android.permission.CAMERA"
       ]
     },
     "web": {
@@ -42,13 +40,15 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Scan a group's QR code to join it, or snap a receipt to attach to an expense."
+          "cameraPermission": "Scan a group's QR code to join it, or snap a receipt to attach to an expense.",
+          "recordAudioAndroid": false
         }
       ],
       [
         "expo-image-picker",
         {
-          "photosPermission": "Attach a receipt photo to an expense."
+          "photosPermission": "Attach a receipt photo to an expense.",
+          "microphonePermission": false
         }
       ],
       [
