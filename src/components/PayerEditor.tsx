@@ -26,9 +26,10 @@ import { X, Check } from 'lucide-react-native';
 import type { Member, Payer } from '../data/types';
 import { parseAmount, formatMinorPlain, formatMoney } from '../data/money';
 import { payersTotal } from '../math/split';
-import { useTheme, fontFamily, space, radius, target, type as t, hairline, type Colors } from '../theme';
+import { useTheme, fontFamily, space, radius, target, type as ty, hairline, type Colors } from '../theme';
 import { Avatar } from './ui';
 import { useReducedMotion } from './Dialogs';
+import { t } from '../i18n';
 
 export function PayerEditor({
   visible,
@@ -116,31 +117,31 @@ export function PayerEditor({
       <KeyboardAvoidingView style={s.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={[s.screen, { paddingTop: insets.top + space.s4 }]}>
           <View style={s.header}>
-            <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel="Cancel" hitSlop={8}>
+            <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel={t('common.cancel')} hitSlop={8}>
               <X size={24} color={c.fgMuted} />
             </Pressable>
             <Text style={s.title} accessibilityRole="header">
-              Paid by
+              {t('payer.title')}
             </Text>
             <Pressable
               onPress={done}
               disabled={!matches}
               accessibilityRole="button"
-              accessibilityLabel="Done"
+              accessibilityLabel={t('common.done')}
               hitSlop={8}
               style={!matches && { opacity: 0.35 }}
             >
-              <Text style={s.done}>Done</Text>
+              <Text style={s.done}>{t('common.done')}</Text>
             </Pressable>
           </View>
 
           <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + space.s7 }} keyboardShouldPersistTaps="handled">
             <Text style={s.hint}>
               {single
-                ? 'One person paid the whole thing.'
+                ? t('payer.hintSingle')
                 : selectedIds.length === 0
-                  ? 'Choose who paid.'
-                  : 'Enter what each person put in.'}
+                  ? t('payer.hintChoose')
+                  : t('payer.hintEnter')}
             </Text>
 
             {members.map((m) => {
@@ -162,8 +163,9 @@ export function PayerEditor({
                   </Pressable>
 
                   {on && single ? (
-                    <Text style={s.fullAmount}>pays the full amount</Text>
-                  ) : on ? (
+                    <Text style={s.fullAmount}>{t('payer.fullAmount')}</Text>
+                  ) : null}
+                  {on && !single ? (
                     <View style={s.amountField}>
                       <Text style={s.fieldCode}>{currency}</Text>
                       <TextInput
@@ -173,7 +175,7 @@ export function PayerEditor({
                         placeholder="0"
                         placeholderTextColor={c.fgSubtle}
                         keyboardType="decimal-pad"
-                        accessibilityLabel={`Amount ${m.displayName} paid`}
+                        accessibilityLabel={t('payer.amountA11y', { name: m.displayName })}
                       />
                     </View>
                   ) : null}
@@ -184,20 +186,23 @@ export function PayerEditor({
             {selectedIds.length >= 2 ? (
               <>
                 <Pressable onPress={splitEvenly} accessibilityRole="button" style={({ pressed }) => [s.evenlyBtn, pressed && { opacity: 0.6 }]}>
-                  <Text style={s.evenlyText}>Split evenly</Text>
+                  <Text style={s.evenlyText}>{t('payer.splitEvenly')}</Text>
                 </Pressable>
                 <View style={s.tally}>
                   <Text style={s.tallyLine}>
-                    {formatMoney(entered, currency)} of {formatMoney(totalMinor, currency)} entered
+                    {t('payer.tallyEntered', {
+                      entered: formatMoney(entered, currency),
+                      total: formatMoney(totalMinor, currency),
+                    })}
                   </Text>
                   {remaining !== 0 ? (
                     <Text style={[s.tallyRemaining, { color: c.warning }]}>
                       {remaining > 0
-                        ? `${formatMoney(remaining, currency)} left to assign`
-                        : `${formatMoney(-remaining, currency)} over`}
+                        ? t('payer.leftToAssign', { amount: formatMoney(remaining, currency) })
+                        : t('payer.over', { amount: formatMoney(-remaining, currency) })}
                     </Text>
                   ) : (
-                    <Text style={[s.tallyRemaining, { color: c.accent }]}>Adds up</Text>
+                    <Text style={[s.tallyRemaining, { color: c.accent }]}>{t('payer.addsUp')}</Text>
                   )}
                 </View>
               </>
@@ -214,9 +219,9 @@ function makeStyles(c: Colors) {
     flex: { flex: 1 },
     screen: { flex: 1, backgroundColor: c.bg, paddingHorizontal: space.s5 },
     header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: space.s4 },
-    title: { ...t.md, fontFamily: fontFamily.sansSemibold, color: c.fg },
-    done: { ...t.base, fontFamily: fontFamily.sansSemibold, color: c.appAccent },
-    hint: { ...t.sm, fontFamily: fontFamily.sans, color: c.fgSubtle, marginBottom: space.s4 },
+    title: { ...ty.md, fontFamily: fontFamily.sansSemibold, color: c.fg },
+    done: { ...ty.base, fontFamily: fontFamily.sansSemibold, color: c.appAccent },
+    hint: { ...ty.sm, fontFamily: fontFamily.sans, color: c.fgSubtle, marginBottom: space.s4 },
 
     row: {
       flexDirection: 'row',
@@ -238,8 +243,8 @@ function makeStyles(c: Colors) {
       justifyContent: 'center',
     },
     checkOn: { backgroundColor: c.appAccent, borderColor: c.appAccent },
-    personName: { ...t.base, fontFamily: fontFamily.sansMedium, color: c.fg, flex: 1 },
-    fullAmount: { ...t.sm, fontFamily: fontFamily.sans, color: c.fgMuted },
+    personName: { ...ty.base, fontFamily: fontFamily.sansMedium, color: c.fg, flex: 1 },
+    fullAmount: { ...ty.sm, fontFamily: fontFamily.sans, color: c.fgMuted },
 
     amountField: {
       flexDirection: 'row',
@@ -252,14 +257,14 @@ function makeStyles(c: Colors) {
       minHeight: 40,
       minWidth: 120,
     },
-    fieldCode: { ...t.sm, fontFamily: fontFamily.sansMedium, color: c.fgSubtle },
-    amountInput: { ...t.base, fontFamily: fontFamily.mono, color: c.fg, flex: 1, textAlign: 'right', paddingVertical: space.s2 },
+    fieldCode: { ...ty.sm, fontFamily: fontFamily.sansMedium, color: c.fgSubtle },
+    amountInput: { ...ty.base, fontFamily: fontFamily.mono, color: c.fg, flex: 1, textAlign: 'right', paddingVertical: space.s2 },
 
     evenlyBtn: { alignSelf: 'flex-start', paddingVertical: space.s4 },
-    evenlyText: { ...t.base, fontFamily: fontFamily.sansMedium, color: c.appAccent },
+    evenlyText: { ...ty.base, fontFamily: fontFamily.sansMedium, color: c.appAccent },
 
     tally: { marginTop: space.s3, gap: 2 },
-    tallyLine: { ...t.sm, fontFamily: fontFamily.sans, color: c.fgMuted },
-    tallyRemaining: { ...t.sm, fontFamily: fontFamily.sansSemibold },
+    tallyLine: { ...ty.sm, fontFamily: fontFamily.sans, color: c.fgMuted },
+    tallyRemaining: { ...ty.sm, fontFamily: fontFamily.sansSemibold },
   });
 }

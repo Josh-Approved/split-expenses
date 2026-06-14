@@ -13,7 +13,8 @@ import {
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import type { RootStackParamList } from './src/navigation';
-import { useAppFonts, lightColors, darkColors } from './src/theme';
+import { useAppFonts, lightColors, darkColors, useApplyThemePreference } from './src/theme';
+import { useApplyLocalePreference, useLocaleVersion } from './src/i18n/localePreference';
 import { useGroups } from './src/store/groups';
 import { startSyncEngine } from './src/sync/engine';
 import { prefetchRates } from './src/data/fx';
@@ -40,6 +41,13 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 export const navRef = createNavigationContainerRef<RootStackParamList>();
 
 export default function App() {
+  // Restore + apply the saved appearance preference (System/Light/Dark) before
+  // first paint; drives useColorScheme() here and in every screen.
+  useApplyThemePreference();
+  // Restore + apply the saved language before first paint; the version below keys
+  // the navigator so a switch re-renders the whole app (canon § Translations).
+  useApplyLocalePreference();
+  const localeVersion = useLocaleVersion();
   const scheme = useColorScheme();
   const [fontsLoaded] = useAppFonts();
   const hydrate = useGroups((s) => s.hydrate);
@@ -91,7 +99,7 @@ export default function App() {
   return (
     <SafeAreaProvider>
       {ready && (
-        <NavigationContainer ref={navRef} theme={themed}>
+        <NavigationContainer key={localeVersion} ref={navRef} theme={themed}>
           <Stack.Navigator screenOptions={{ headerShown: false, contentStyle: { backgroundColor: c.bg }, animation: QA_MODE ? 'none' : undefined }}>
             <Stack.Screen name="GroupsHome" component={GroupsHomeScreen} />
             <Stack.Screen name="GroupDetail" component={GroupDetailScreen} />

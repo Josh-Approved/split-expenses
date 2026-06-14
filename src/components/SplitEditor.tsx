@@ -25,15 +25,17 @@ import { X, Check, Minus, Plus } from 'lucide-react-native';
 import type { Member, SplitMethod, SplitPart, Expense } from '../data/types';
 import { parseAmount, formatMinorPlain, formatMoney } from '../data/money';
 import { computeOwed, exactSplitTotal } from '../math/split';
-import { useTheme, fontFamily, space, radius, target, type as t, hairline, type Colors } from '../theme';
+import { useTheme, fontFamily, space, radius, target, type as ty, hairline, type Colors } from '../theme';
 import { Avatar } from './ui';
 import { useReducedMotion } from './Dialogs';
+import { t } from '../i18n';
 
-const METHODS: { key: SplitMethod; label: string }[] = [
-  { key: 'equal', label: 'Equal' },
-  { key: 'exact', label: 'Exact' },
-  { key: 'shares', label: 'Shares' },
-  { key: 'percent', label: '%' },
+// Keys only at module scope — resolved via t() at render time (canon § Translations).
+const METHODS: { key: SplitMethod; labelKey: string }[] = [
+  { key: 'equal', labelKey: 'split.methodEqual' },
+  { key: 'exact', labelKey: 'split.methodExact' },
+  { key: 'shares', labelKey: 'split.methodShares' },
+  { key: 'percent', labelKey: 'split.methodPercent' },
 ];
 
 export function SplitEditor({
@@ -147,14 +149,14 @@ export function SplitEditor({
       <KeyboardAvoidingView style={s.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={[s.screen, { paddingTop: insets.top + space.s4 }]}>
           <View style={s.header}>
-            <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel="Cancel" hitSlop={8}>
+            <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel={t('common.cancel')} hitSlop={8}>
               <X size={24} color={c.fgMuted} />
             </Pressable>
             <Text style={s.title} accessibilityRole="header">
-              Split
+              {t('split.title')}
             </Text>
-            <Pressable onPress={done} disabled={!canDone} accessibilityRole="button" accessibilityLabel="Done" hitSlop={8} style={!canDone && { opacity: 0.35 }}>
-              <Text style={s.done}>Done</Text>
+            <Pressable onPress={done} disabled={!canDone} accessibilityRole="button" accessibilityLabel={t('common.done')} hitSlop={8} style={!canDone && { opacity: 0.35 }}>
+              <Text style={s.done}>{t('common.done')}</Text>
             </Pressable>
           </View>
 
@@ -168,10 +170,10 @@ export function SplitEditor({
                   onPress={() => setMode(mt.key)}
                   accessibilityRole="button"
                   accessibilityState={{ selected: on }}
-                  accessibilityLabel={mt.label}
+                  accessibilityLabel={t(mt.labelKey)}
                   style={({ pressed }) => [s.segItem, on && s.segItemOn, pressed && { opacity: 0.7 }]}
                 >
-                  <Text style={[s.segText, on && s.segTextOn]}>{mt.label}</Text>
+                  <Text style={[s.segText, on && s.segTextOn]}>{t(mt.labelKey)}</Text>
                 </Pressable>
               );
             })}
@@ -212,18 +214,18 @@ export function SplitEditor({
                         placeholder="0"
                         placeholderTextColor={c.fgSubtle}
                         keyboardType="decimal-pad"
-                        accessibilityLabel={`Exact amount for ${m.displayName}`}
+                        accessibilityLabel={t('split.exactA11y', { name: m.displayName })}
                       />
                     </View>
                   ) : null}
 
                   {on && mode === 'shares' ? (
                     <View style={s.stepper}>
-                      <Pressable onPress={() => bumpShare(m.id, -1)} accessibilityRole="button" accessibilityLabel="Fewer shares" hitSlop={6} style={s.stepBtn}>
+                      <Pressable onPress={() => bumpShare(m.id, -1)} accessibilityRole="button" accessibilityLabel={t('split.fewerShares')} hitSlop={6} style={s.stepBtn}>
                         <Minus size={16} color={c.fg} />
                       </Pressable>
                       <Text style={s.stepValue}>{Math.max(0, Math.round(shareVal[m.id] ?? 1))}</Text>
-                      <Pressable onPress={() => bumpShare(m.id, 1)} accessibilityRole="button" accessibilityLabel="More shares" hitSlop={6} style={s.stepBtn}>
+                      <Pressable onPress={() => bumpShare(m.id, 1)} accessibilityRole="button" accessibilityLabel={t('split.moreShares')} hitSlop={6} style={s.stepBtn}>
                         <Plus size={16} color={c.fg} />
                       </Pressable>
                     </View>
@@ -238,7 +240,7 @@ export function SplitEditor({
                         placeholder="0"
                         placeholderTextColor={c.fgSubtle}
                         keyboardType="decimal-pad"
-                        accessibilityLabel={`Percent for ${m.displayName}`}
+                        accessibilityLabel={t('split.percentA11y', { name: m.displayName })}
                       />
                       <Text style={s.fieldCode}>%</Text>
                     </View>
@@ -250,20 +252,27 @@ export function SplitEditor({
             {mode === 'exact' ? (
               <View style={s.foot}>
                 <Text style={s.footLine}>
-                  {formatMoney(exactSum, currency)} of {formatMoney(totalMinor, currency)} assigned
+                  {t('split.exactAssigned', {
+                    assigned: formatMoney(exactSum, currency),
+                    total: formatMoney(totalMinor, currency),
+                  })}
                 </Text>
-                <Text style={s.footNote}>The payer covers any leftover cent.</Text>
+                <Text style={s.footNote}>{t('split.leftoverNote')}</Text>
               </View>
             ) : null}
 
             {mode === 'percent' ? (
               <View style={s.foot}>
-                <Text style={[s.footLine, { color: pctSum === 100 ? c.accent : c.warning }]}>{pctSum}% of 100% assigned</Text>
+                <Text style={[s.footLine, { color: pctSum === 100 ? c.accent : c.warning }]}>{t('split.pctAssigned', { pct: pctSum })}</Text>
               </View>
             ) : null}
 
             {mode === 'equal' && includedMembers.length > 0 ? (
-              <Text style={s.footNote}>Split {includedMembers.length} way{includedMembers.length === 1 ? '' : 's'}.</Text>
+              <Text style={s.footNote}>
+                {includedMembers.length === 1
+                  ? t('split.splitWaysOne', { count: includedMembers.length })
+                  : t('split.splitWaysOther', { count: includedMembers.length })}
+              </Text>
             ) : null}
           </ScrollView>
         </View>
@@ -277,8 +286,8 @@ function makeStyles(c: Colors) {
     flex: { flex: 1 },
     screen: { flex: 1, backgroundColor: c.bg, paddingHorizontal: space.s5 },
     header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: space.s4 },
-    title: { ...t.md, fontFamily: fontFamily.sansSemibold, color: c.fg },
-    done: { ...t.base, fontFamily: fontFamily.sansSemibold, color: c.appAccent },
+    title: { ...ty.md, fontFamily: fontFamily.sansSemibold, color: c.fg },
+    done: { ...ty.base, fontFamily: fontFamily.sansSemibold, color: c.appAccent },
 
     segment: {
       flexDirection: 'row',
@@ -289,7 +298,7 @@ function makeStyles(c: Colors) {
     },
     segItem: { flex: 1, alignItems: 'center', justifyContent: 'center', minHeight: 36, borderRadius: radius.sm },
     segItemOn: { backgroundColor: c.bgElevated, borderWidth: hairline, borderColor: c.hairline },
-    segText: { ...t.sm, fontFamily: fontFamily.sansMedium, color: c.fgMuted },
+    segText: { ...ty.sm, fontFamily: fontFamily.sansMedium, color: c.fgMuted },
     segTextOn: { color: c.fg, fontFamily: fontFamily.sansSemibold },
 
     row: {
@@ -312,8 +321,8 @@ function makeStyles(c: Colors) {
       justifyContent: 'center',
     },
     checkOn: { backgroundColor: c.appAccent, borderColor: c.appAccent },
-    personName: { ...t.base, fontFamily: fontFamily.sansMedium, color: c.fg },
-    owedPreview: { ...t.sm, fontFamily: fontFamily.mono, color: c.fgMuted, marginTop: 1 },
+    personName: { ...ty.base, fontFamily: fontFamily.sansMedium, color: c.fg },
+    owedPreview: { ...ty.sm, fontFamily: fontFamily.mono, color: c.fgMuted, marginTop: 1 },
 
     amountField: {
       flexDirection: 'row',
@@ -326,8 +335,8 @@ function makeStyles(c: Colors) {
       minHeight: 40,
       minWidth: 100,
     },
-    fieldCode: { ...t.sm, fontFamily: fontFamily.sansMedium, color: c.fgSubtle },
-    amountInput: { ...t.base, fontFamily: fontFamily.mono, color: c.fg, flex: 1, textAlign: 'right', paddingVertical: space.s2 },
+    fieldCode: { ...ty.sm, fontFamily: fontFamily.sansMedium, color: c.fgSubtle },
+    amountInput: { ...ty.base, fontFamily: fontFamily.mono, color: c.fg, flex: 1, textAlign: 'right', paddingVertical: space.s2 },
 
     stepper: { flexDirection: 'row', alignItems: 'center', gap: space.s4 },
     stepBtn: {
@@ -339,10 +348,10 @@ function makeStyles(c: Colors) {
       alignItems: 'center',
       justifyContent: 'center',
     },
-    stepValue: { ...t.base, fontFamily: fontFamily.sansSemibold, color: c.fg, minWidth: 24, textAlign: 'center' },
+    stepValue: { ...ty.base, fontFamily: fontFamily.sansSemibold, color: c.fg, minWidth: 24, textAlign: 'center' },
 
     foot: { marginTop: space.s4, gap: 2 },
-    footLine: { ...t.sm, fontFamily: fontFamily.sansSemibold, color: c.fgMuted },
-    footNote: { ...t.sm, fontFamily: fontFamily.sans, color: c.fgSubtle, marginTop: space.s3 },
+    footLine: { ...ty.sm, fontFamily: fontFamily.sansSemibold, color: c.fgMuted },
+    footNote: { ...ty.sm, fontFamily: fontFamily.sans, color: c.fgSubtle, marginTop: space.s3 },
   });
 }

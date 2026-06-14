@@ -28,9 +28,10 @@ import {
 import { formatMoney } from '../data/money';
 import { memberName, memberById, activeMembers } from '../lib/format';
 import { paymentOptions, buildReminderMessage } from '../lib/payments';
-import { useTheme, fontFamily, space, radius, type as t, hairline, type Colors } from '../theme';
+import { useTheme, fontFamily, space, radius, type as ty, hairline, type Colors } from '../theme';
 import { EmptyState, SectionLabel } from '../components/ui';
 import { useActionMenu } from '../components/Dialogs';
+import { t } from '../i18n';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'SettleUp'>;
 
@@ -49,7 +50,7 @@ export default function SettleUpScreen({ navigation, route }: Props) {
     return (
       <View style={[s.screen, { paddingTop: insets.top }]}>
         <Topbar c={c} s={s} onBack={() => navigation.goBack()} />
-        <EmptyState title="Group not found" />
+        <EmptyState title={t('group.notFound')} />
       </View>
     );
   }
@@ -65,30 +66,33 @@ export default function SettleUpScreen({ navigation, route }: Props) {
     const name = memberName(group, memberId);
     const settledPhrase =
       sum.settled === 0
-        ? 'no settlements'
+        ? t('settle.noSettlements')
         : sum.settled > 0
-          ? `paid out ${formatMoney(sum.settled, base)}`
-          : `received ${formatMoney(-sum.settled, base)}`;
+          ? t('settle.paidOut', { amount: formatMoney(sum.settled, base) })
+          : t('settle.received', { amount: formatMoney(-sum.settled, base) });
     const netPhrase =
       sum.net === 0
-        ? 'settled up'
+        ? t('settle.settledUp')
         : sum.net > 0
-          ? `owed ${formatMoney(sum.net, base)}`
-          : `owes ${formatMoney(-sum.net, base)}`;
+          ? t('settle.owedAmount', { amount: formatMoney(sum.net, base) })
+          : t('settle.owesAmount', { amount: formatMoney(-sum.net, base) });
     menu.open({
-      title: `${name}\nPaid ${formatMoney(sum.paid, base)} · share ${formatMoney(
-        sum.share,
-        base,
-      )} · ${settledPhrase}  →  ${netPhrase}`,
-      options: [{ label: 'Done', onPress: () => {} }],
+      title: t('settle.workTitle', {
+        name,
+        paid: formatMoney(sum.paid, base),
+        share: formatMoney(sum.share, base),
+        settled: settledPhrase,
+        net: netPhrase,
+      }),
+      options: [{ label: t('common.done'), onPress: () => {} }],
     });
   };
 
   /** Open the settle options for one planned payment. */
   const showSettle = (transfer: Transfer) => {
     const recipient = memberById(group, transfer.to);
-    const fromName = transfer.from === meId ? 'You' : memberName(group, transfer.from);
-    const toName = transfer.to === meId ? 'you' : memberName(group, transfer.to);
+    const fromName = transfer.from === meId ? t('settle.you') : memberName(group, transfer.from);
+    const toName = transfer.to === meId ? t('settle.youLower') : memberName(group, transfer.to);
 
     const writeSettlement = (method: 'cash' | 'external') =>
       useGroups.getState().addSettlement(groupId, {
@@ -110,7 +114,7 @@ export default function SettleUpScreen({ navigation, route }: Props) {
     // sends nothing; it hands a prefilled draft to the OS share sheet).
     if (owedToMe) {
       options.push({
-        label: `Ask ${memberName(group, transfer.from)} to pay`,
+        label: t('settle.askToPay', { name: memberName(group, transfer.from) }),
         onPress: () => {
           const message = buildReminderMessage({
             debtorName: memberName(group, transfer.from),
@@ -123,7 +127,7 @@ export default function SettleUpScreen({ navigation, route }: Props) {
       });
     }
 
-    options.push({ label: 'Mark as paid in cash', onPress: () => writeSettlement('cash') });
+    options.push({ label: t('settle.markCash'), onPress: () => writeSettlement('cash') });
 
     // The pay-with hand-offs only make sense when *I'm* the one paying; they
     // open the recipient's app prefilled. (Never shown when someone owes me.)
@@ -140,7 +144,11 @@ export default function SettleUpScreen({ navigation, route }: Props) {
     }
 
     menu.open({
-      title: `${fromName} → ${toName}   ${formatMoney(transfer.amount, base)}`,
+      title: t('settle.transferTitle', {
+        from: fromName,
+        to: toName,
+        amount: formatMoney(transfer.amount, base),
+      }),
       options,
     });
   };
@@ -151,24 +159,28 @@ export default function SettleUpScreen({ navigation, route }: Props) {
 
       <ScrollView contentContainerStyle={{ padding: space.s5, paddingBottom: insets.bottom + space.s8 }}>
         {/* ---- Balances ------------------------------------------------ */}
-        <SectionLabel>Balances</SectionLabel>
+        <SectionLabel>{t('settle.balances')}</SectionLabel>
         <View style={s.group}>
           {members.map((m, i) => {
             const net = balances.get(m.id) ?? 0;
             const isMe = m.id === meId;
-            const name = isMe ? 'You' : m.displayName;
+            const name = isMe ? t('settle.you') : m.displayName;
             const status =
               net === 0
-                ? 'settled up'
+                ? t('settle.settledUp')
                 : net > 0
-                  ? `${isMe ? "you're" : 'is'} owed ${formatMoney(net, base)}`
-                  : `${isMe ? 'you owe' : 'owes'} ${formatMoney(-net, base)}`;
+                  ? isMe
+                    ? t('settle.owedYou', { amount: formatMoney(net, base) })
+                    : t('settle.owedOther', { amount: formatMoney(net, base) })
+                  : isMe
+                    ? t('settle.owesYou', { amount: formatMoney(-net, base) })
+                    : t('settle.owesOther', { amount: formatMoney(-net, base) });
             return (
               <Pressable
                 key={m.id}
                 onPress={() => showWork(m.id)}
                 accessibilityRole="button"
-                accessibilityLabel={`${name} ${status}. Tap to see how this is figured.`}
+                accessibilityLabel={t('settle.balanceRowA11y', { name, status })}
                 style={({ pressed }) => [
                   s.balanceRow,
                   i > 0 && s.rowBorder,
@@ -190,23 +202,23 @@ export default function SettleUpScreen({ navigation, route }: Props) {
             );
           })}
         </View>
-        <Text style={s.hint}>Tap a person to see how their balance is figured.</Text>
+        <Text style={s.hint}>{t('settle.balanceHint')}</Text>
 
         {/* ---- The plan ------------------------------------------------ */}
-        <SectionLabel>The fewest payments to settle up</SectionLabel>
+        <SectionLabel>{t('settle.fewestPayments')}</SectionLabel>
         {plan.length === 0 ? (
-          <EmptyState title="All settled up" message="No payments needed." />
+          <EmptyState title={t('group.allSettledUp')} message={t('settle.noPaymentsNeeded')} />
         ) : (
           <View style={s.group}>
             {plan.map((tr, i) => {
-              const fromName = tr.from === meId ? 'You' : memberName(group, tr.from);
-              const toName = tr.to === meId ? 'You' : memberName(group, tr.to);
+              const fromName = tr.from === meId ? t('settle.you') : memberName(group, tr.from);
+              const toName = tr.to === meId ? t('settle.you') : memberName(group, tr.to);
               return (
                 <Pressable
                   key={`${tr.from}-${tr.to}-${i}`}
                   onPress={() => showSettle(tr)}
                   accessibilityRole="button"
-                  accessibilityLabel={`${fromName} pays ${toName} ${formatMoney(tr.amount, base)}. Tap to settle.`}
+                  accessibilityLabel={t('settle.planRowA11y', { from: fromName, to: toName, amount: formatMoney(tr.amount, base) })}
                   style={({ pressed }) => [
                     s.planRow,
                     i > 0 && s.rowBorder,
@@ -242,11 +254,11 @@ function Topbar({
 }) {
   return (
     <View style={s.topbar}>
-      <Pressable onPress={onBack} accessibilityRole="button" accessibilityLabel="Back" hitSlop={8} style={s.iconBtn}>
+      <Pressable onPress={onBack} accessibilityRole="button" accessibilityLabel={t('common.back')} hitSlop={8} style={s.iconBtn}>
         <Text style={s.backChevron}>‹</Text>
       </Pressable>
       <Text style={s.topTitle} numberOfLines={1} accessibilityRole="header">
-        Settle up
+        {t('settle.title')}
       </Text>
       <View style={s.iconBtn} />
     </View>
@@ -261,7 +273,7 @@ function makeStyles(c: Colors) {
     iconBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
     backChevron: { fontSize: 30, lineHeight: 32, color: c.fg, fontFamily: fontFamily.sans },
     topbar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: space.s4, paddingVertical: space.s3, gap: space.s2 },
-    topTitle: { ...t.md, fontFamily: fontFamily.sansSemibold, color: c.fg, flex: 1 },
+    topTitle: { ...ty.md, fontFamily: fontFamily.sansSemibold, color: c.fg, flex: 1 },
 
     group: {
       backgroundColor: c.bgElevated,
@@ -280,10 +292,10 @@ function makeStyles(c: Colors) {
       paddingVertical: space.s4,
       minHeight: 52,
     },
-    balanceName: { ...t.base, fontFamily: fontFamily.sansMedium, color: c.fg, flex: 1 },
-    balanceStatus: { ...t.base, fontFamily: fontFamily.sansMedium, textAlign: 'right' },
+    balanceName: { ...ty.base, fontFamily: fontFamily.sansMedium, color: c.fg, flex: 1 },
+    balanceStatus: { ...ty.base, fontFamily: fontFamily.sansMedium, textAlign: 'right' },
 
-    hint: { ...t.sm, fontFamily: fontFamily.sans, color: c.fgSubtle, marginTop: space.s3, paddingHorizontal: space.s2 },
+    hint: { ...ty.sm, fontFamily: fontFamily.sans, color: c.fgSubtle, marginTop: space.s3, paddingHorizontal: space.s2 },
 
     planRow: {
       flexDirection: 'row',
@@ -293,10 +305,10 @@ function makeStyles(c: Colors) {
       paddingVertical: space.s4,
       minHeight: 52,
     },
-    planPeople: { ...t.base, fontFamily: fontFamily.sans, color: c.fg, flex: 1 },
+    planPeople: { ...ty.base, fontFamily: fontFamily.sans, color: c.fg, flex: 1 },
     planFrom: { fontFamily: fontFamily.sansMedium, color: c.fg },
     planArrow: { color: c.fgSubtle },
     planTo: { fontFamily: fontFamily.sansMedium, color: c.fg },
-    planAmount: { ...t.base, fontFamily: fontFamily.sansSemibold, color: c.fg },
+    planAmount: { ...ty.base, fontFamily: fontFamily.sansSemibold, color: c.fg },
   });
 }

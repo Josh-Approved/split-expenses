@@ -21,12 +21,13 @@ import {
   space,
   radius,
   target,
-  type as t,
+  type as ty,
   tracking,
   hairline,
   type Colors,
 } from '../theme';
 import { initials } from '../lib/format';
+import { t } from '../i18n';
 
 const styles = StyleSheet.create({
   avatar: { alignItems: 'center', justifyContent: 'center' },
@@ -219,7 +220,7 @@ export function HeaderBar({
   return (
     <View style={s.header}>
       {onBack ? (
-        <Pressable onPress={onBack} accessibilityRole="button" accessibilityLabel="Back" style={s.headerBack} hitSlop={8}>
+        <Pressable onPress={onBack} accessibilityRole="button" accessibilityLabel={t('common.back')} style={s.headerBack} hitSlop={8}>
           <Text style={s.headerBackText}>‹</Text>
         </Pressable>
       ) : (
@@ -243,7 +244,7 @@ function makeStyles(c: Colors) {
       alignItems: 'center',
       justifyContent: 'center',
     },
-    btnText: { ...t.base, fontFamily: fontFamily.sansSemibold },
+    btnText: { ...ty.base, fontFamily: fontFamily.sansSemibold },
     btnDisabled: { opacity: 0.4 },
 
     card: {
@@ -254,7 +255,7 @@ function makeStyles(c: Colors) {
       overflow: 'hidden',
     },
     sectionLabel: {
-      ...t.xs,
+      ...ty.xs,
       fontFamily: fontFamily.sansSemibold,
       color: c.fgMuted,
       textTransform: 'uppercase',
@@ -273,13 +274,13 @@ function makeStyles(c: Colors) {
     },
     rowLeading: {},
     rowBody: { flex: 1 },
-    rowTitle: { ...t.base, fontFamily: fontFamily.sansMedium, color: c.fg },
-    rowSubtitle: { ...t.sm, fontFamily: fontFamily.sans, color: c.fgMuted, marginTop: 1 },
+    rowTitle: { ...ty.base, fontFamily: fontFamily.sansMedium, color: c.fg },
+    rowSubtitle: { ...ty.sm, fontFamily: fontFamily.sans, color: c.fgMuted, marginTop: 1 },
     rowTrailing: { alignItems: 'flex-end' },
 
     empty: { alignItems: 'center', paddingHorizontal: space.s7, paddingVertical: space.s9 },
-    emptyTitle: { ...t.md, fontFamily: fontFamily.sansSemibold, color: c.fg, textAlign: 'center' },
-    emptyMessage: { ...t.base, fontFamily: fontFamily.sans, color: c.fgMuted, textAlign: 'center', marginTop: space.s3 },
+    emptyTitle: { ...ty.md, fontFamily: fontFamily.sansSemibold, color: c.fg, textAlign: 'center' },
+    emptyMessage: { ...ty.base, fontFamily: fontFamily.sans, color: c.fgMuted, textAlign: 'center', marginTop: space.s3 },
 
     header: {
       flexDirection: 'row',
@@ -290,7 +291,7 @@ function makeStyles(c: Colors) {
     },
     headerBack: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
     headerBackText: { fontSize: 30, lineHeight: 32, color: c.fg, fontFamily: fontFamily.sans },
-    headerTitle: { ...t.md, fontFamily: fontFamily.sansSemibold, color: c.fg, flex: 1 },
+    headerTitle: { ...ty.md, fontFamily: fontFamily.sansSemibold, color: c.fg, flex: 1 },
     headerRight: { minWidth: 36, alignItems: 'flex-end' },
   });
 }

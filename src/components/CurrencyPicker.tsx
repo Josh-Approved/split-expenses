@@ -8,8 +8,9 @@ import { Modal, View, Text, TextInput, FlatList, Pressable, StyleSheet } from 'r
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Check } from 'lucide-react-native';
 import { CURRENCIES } from '../data/currencies';
-import { useTheme, fontFamily, space, radius, target, type as t, hairline, type Colors } from '../theme';
+import { useTheme, fontFamily, space, radius, target, type as ty, hairline, type Colors } from '../theme';
 import { useReducedMotion } from './Dialogs';
+import { t } from '../i18n';
 
 export function CurrencyPicker({
   visible,
@@ -41,17 +42,17 @@ export function CurrencyPicker({
       <View style={[s.screen, { paddingTop: insets.top + space.s4 }]}>
         <View style={s.header}>
           <Text style={s.title} accessibilityRole="header">
-            Currency
+            {t('currency.title')}
           </Text>
-          <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel="Done" hitSlop={8}>
-            <Text style={s.done}>Done</Text>
+          <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel={t('common.done')} hitSlop={8}>
+            <Text style={s.done}>{t('common.done')}</Text>
           </Pressable>
         </View>
         <TextInput
           style={s.search}
           value={query}
           onChangeText={setQuery}
-          placeholder="Search currencies"
+          placeholder={t('currency.search')}
           placeholderTextColor={c.fgSubtle}
           autoCapitalize="characters"
           autoCorrect={false}
@@ -93,10 +94,10 @@ function makeStyles(c: Colors) {
   return StyleSheet.create({
     screen: { flex: 1, backgroundColor: c.bg, paddingHorizontal: space.s5 },
     header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: space.s4 },
-    title: { ...t.md, fontFamily: fontFamily.sansSemibold, color: c.fg },
-    done: { ...t.base, fontFamily: fontFamily.sansSemibold, color: c.appAccent },
+    title: { ...ty.md, fontFamily: fontFamily.sansSemibold, color: c.fg },
+    done: { ...ty.base, fontFamily: fontFamily.sansSemibold, color: c.appAccent },
     search: {
-      ...t.base,
+      ...ty.base,
       fontFamily: fontFamily.sans,
       color: c.fg,
       borderWidth: hairline,
@@ -114,8 +115,8 @@ function makeStyles(c: Colors) {
       borderBottomWidth: hairline,
       borderBottomColor: c.hairline,
     },
-    code: { ...t.base, fontFamily: fontFamily.sansSemibold, color: c.fg, width: 52 },
-    name: { ...t.base, fontFamily: fontFamily.sans, color: c.fgMuted, flex: 1 },
-    symbol: { ...t.base, fontFamily: fontFamily.sans, color: c.fgSubtle, width: 36, textAlign: 'right' },
+    code: { ...ty.base, fontFamily: fontFamily.sansSemibold, color: c.fg, width: 52 },
+    name: { ...ty.base, fontFamily: fontFamily.sans, color: c.fgMuted, flex: 1 },
+    symbol: { ...ty.base, fontFamily: fontFamily.sans, color: c.fgSubtle, width: 36, textAlign: 'right' },
   });
 }

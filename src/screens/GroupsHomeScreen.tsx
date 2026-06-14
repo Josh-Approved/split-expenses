@@ -14,11 +14,12 @@ import type { RootStackParamList } from '../navigation';
 import { useGroups } from '../store/groups';
 import { computeBalances } from '../math/balances';
 import { phraseSelfNet, phraseGroupSubtitle, activeMembers } from '../lib/format';
-import { useTheme, fontFamily, space, radius, type as t, hairline, type Colors } from '../theme';
+import { useTheme, fontFamily, space, radius, type as ty, hairline, type Colors } from '../theme';
 import { Avatar, Card, EmptyState, Divider } from '../components/ui';
 import { useActionMenu, usePrompt, useConfirm } from '../components/Dialogs';
 import { CreateGroupSheet } from '../components/CreateGroupSheet';
 import { FundingFooter } from '../components/FundingFooter';
+import { t } from '../i18n';
 import type { Group } from '../data/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'GroupsHome'>;
@@ -48,26 +49,26 @@ export default function GroupsHomeScreen({ navigation }: Props) {
       title: g.name,
       options: [
         {
-          label: 'Rename',
+          label: t('common.rename'),
           onPress: () =>
             prompt.open({
-              title: 'Rename group',
+              title: t('groups.renameTitle'),
               initialValue: g.name,
               selectAll: true,
-              confirmLabel: 'Save',
+              confirmLabel: t('common.save'),
               onSubmit: (text) => renameGroup(g.id, text),
             }),
         },
-        { label: 'Share', onPress: () => navigation.navigate('Share', { groupId: g.id }) },
-        { label: 'Duplicate', onPress: () => duplicateGroup(g.id) },
+        { label: t('groups.menuShare'), onPress: () => navigation.navigate('Share', { groupId: g.id }) },
+        { label: t('groups.duplicate'), onPress: () => duplicateGroup(g.id) },
         {
-          label: 'Delete',
+          label: t('common.delete'),
           destructive: true,
           onPress: () =>
             confirm.open({
-              title: `Delete "${g.name}"?`,
-              message: 'This removes the group from this device. Anyone you shared it with keeps their copy.',
-              confirmLabel: 'Delete',
+              title: t('groups.deleteTitle', { name: g.name }),
+              message: t('groups.deleteMessage'),
+              confirmLabel: t('common.delete'),
               destructive: true,
               onConfirm: () => deleteGroup(g.id),
             }),
@@ -80,12 +81,12 @@ export default function GroupsHomeScreen({ navigation }: Props) {
     <View style={[s.screen, { paddingTop: insets.top }]}>
       <View style={s.topbar}>
         <Text style={s.title} accessibilityRole="header">
-          Groups
+          {t('groups.title')}
         </Text>
         <Pressable
           onPress={() => navigation.navigate('Settings')}
           accessibilityRole="button"
-          accessibilityLabel="Settings"
+          accessibilityLabel={t('settings.title')}
           hitSlop={8}
           style={({ pressed }) => [s.iconBtn, pressed && s.pressed]}
         >
@@ -99,8 +100,8 @@ export default function GroupsHomeScreen({ navigation }: Props) {
         contentContainerStyle={{ padding: space.s5, paddingBottom: insets.bottom + 96 }}
         ListEmptyComponent={
           <EmptyState
-            title="No groups yet"
-            message="Make a group for a trip, a house, or a couple — then start adding what people pay for."
+            title={t('groups.emptyTitle')}
+            message={t('groups.emptyMessage')}
           />
         }
         ListFooterComponent={sorted.length > 0 ? <FundingFooter /> : null}
@@ -141,7 +142,7 @@ export default function GroupsHomeScreen({ navigation }: Props) {
                 <Pressable
                   onPress={() => openMenu(item)}
                   accessibilityRole="button"
-                  accessibilityLabel={`More options for ${item.name}`}
+                  accessibilityLabel={t('groups.moreOptionsFor', { name: item.name })}
                   hitSlop={10}
                   style={({ pressed }) => [s.iconBtn, pressed && s.pressed]}
                 >
@@ -156,7 +157,7 @@ export default function GroupsHomeScreen({ navigation }: Props) {
       <Pressable
         onPress={() => setCreating(true)}
         accessibilityRole="button"
-        accessibilityLabel="New group"
+        accessibilityLabel={t('groups.newGroup')}
         style={({ pressed }) => [s.fab, { bottom: insets.bottom + space.s5 }, pressed && s.pressed]}
       >
         <Plus size={26} color={c.inkButtonText} />
@@ -194,8 +195,8 @@ function makeStyles(c: Colors) {
     groupRow: { flexDirection: 'row', alignItems: 'center', padding: space.s5, gap: space.s4 },
     avatars: { flexDirection: 'row' },
     groupBody: { flex: 1 },
-    groupName: { ...t.base, fontFamily: fontFamily.sansSemibold, color: c.fg },
-    groupLine: { ...t.sm, fontFamily: fontFamily.sans, color: c.fgMuted, marginTop: 2 },
+    groupName: { ...ty.base, fontFamily: fontFamily.sansSemibold, color: c.fg },
+    groupLine: { ...ty.sm, fontFamily: fontFamily.sans, color: c.fgMuted, marginTop: 2 },
 
     fab: {
       position: 'absolute',

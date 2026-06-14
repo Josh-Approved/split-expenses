@@ -32,11 +32,12 @@ import {
   space,
   radius,
   target,
-  type as t,
+  type as ty,
   hairline,
   type Colors,
 } from '../theme';
 import { boundedContent } from '../theme';
+import { t } from '../i18n';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Share'>;
 
@@ -93,13 +94,13 @@ export default function ShareScreen({ route, navigation }: Props) {
     <SafeAreaView style={s.safe} edges={['top', 'left', 'right', 'bottom']}>
       <View style={s.header}>
         <Text style={s.title} accessibilityRole="header">
-          {scanning ? 'Scan a group code' : 'Share this group'}
+          {scanning ? t('share.scanTitle') : t('share.shareTitle')}
         </Text>
         <Pressable
           onPress={() => (scanning ? setScanning(false) : navigation.goBack())}
           hitSlop={8}
           accessibilityRole="button"
-          accessibilityLabel="Close"
+          accessibilityLabel={t('common.close')}
           style={({ pressed }) => [s.iconBtn, pressed && s.pressed]}
         >
           <X size={22} color={c.fg} strokeWidth={1.5} />
@@ -116,29 +117,29 @@ export default function ShareScreen({ route, navigation }: Props) {
                 barcodeScannerSettings={{ barcodeTypes: ['qr'] }}
                 onBarcodeScanned={onScanned}
               />
-              <Text style={s.hint}>Point at the other phone’s QR code.</Text>
+              <Text style={s.hint}>{t('share.scanHint')}</Text>
             </>
           ) : (
             <View style={s.deniedWrap}>
-              <Text style={s.deniedTitle}>Camera access is off</Text>
+              <Text style={s.deniedTitle}>{t('share.cameraOff')}</Text>
               <Text style={s.deniedBody}>
-                To scan a group code, let this app use the camera. You can turn it on in Settings.
+                {t('share.cameraBody')}
               </Text>
               <Pressable
                 onPress={() => Linking.openSettings().catch(() => {})}
                 accessibilityRole="button"
-                accessibilityLabel="Open Settings"
+                accessibilityLabel={t('share.openSettings')}
                 style={({ pressed }) => [s.primaryBtn, pressed && s.pressed]}
               >
-                <Text style={s.primaryText}>Open Settings</Text>
+                <Text style={s.primaryText}>{t('share.openSettings')}</Text>
               </Pressable>
               <Pressable
                 onPress={() => requestPermission()}
                 accessibilityRole="button"
-                accessibilityLabel="Try again"
+                accessibilityLabel={t('share.tryAgain')}
                 style={({ pressed }) => [s.ghostBtn, pressed && s.pressed]}
               >
-                <Text style={s.ghostText}>Try again</Text>
+                <Text style={s.ghostText}>{t('share.tryAgain')}</Text>
               </Pressable>
             </View>
           )}
@@ -146,8 +147,9 @@ export default function ShareScreen({ route, navigation }: Props) {
       ) : (
         <View style={s.body}>
           <Text style={s.lead}>
-            Anyone with this link can see and add expenses to{' '}
-            <Text style={s.leadStrong}>{group?.name ?? 'this group'}</Text>. No account needed.
+            {t('share.leadBefore')}
+            <Text style={s.leadStrong}>{group?.name ?? t('group.thisGroup')}</Text>
+            {t('share.leadAfter')}
           </Text>
           {link ? (
             <View style={s.qrCard}>
@@ -157,23 +159,23 @@ export default function ShareScreen({ route, navigation }: Props) {
           <Pressable
             onPress={onSend}
             accessibilityRole="button"
-            accessibilityLabel="Send link"
+            accessibilityLabel={t('share.sendLink')}
             style={({ pressed }) => [s.primaryBtn, s.primaryBtnRow, pressed && s.pressed]}
           >
             <Share2 size={18} color={c.inkButtonText} strokeWidth={1.5} />
-            <Text style={s.primaryText}>Send link</Text>
+            <Text style={s.primaryText}>{t('share.sendLink')}</Text>
           </Pressable>
           <Pressable
             onPress={startScan}
             accessibilityRole="button"
-            accessibilityLabel="Scan a code instead"
+            accessibilityLabel={t('share.scanInstead')}
             style={({ pressed }) => [s.ghostBtn, pressed && s.pressed]}
           >
             <ScanLine size={18} color={c.fg} strokeWidth={1.5} />
-            <Text style={s.ghostText}>Scan a code instead</Text>
+            <Text style={s.ghostText}>{t('share.scanInstead')}</Text>
           </Pressable>
           <Text style={s.fineprint}>
-            The group lives on each member’s phone and is passed back and forth, end-to-end encrypted, through free public drop boxes we don’t run and can’t read. It stays in sync on its own — no account, no server of ours in the middle.
+            {t('share.fineprint')}
           </Text>
         </View>
       )}
@@ -193,11 +195,11 @@ function makeStyles(c: Colors) {
       paddingHorizontal: space.s5,
       paddingVertical: space.s4,
     },
-    title: { ...t.md, fontFamily: fontFamily.sansSemibold, color: c.fg },
+    title: { ...ty.md, fontFamily: fontFamily.sansSemibold, color: c.fg },
     iconBtn: { width: target.min, height: target.min, alignItems: 'center', justifyContent: 'center' },
 
     body: { ...boundedContent, flex: 1, alignItems: 'center', paddingHorizontal: space.s7, gap: space.s6 },
-    lead: { ...t.base, fontFamily: fontFamily.sans, color: c.fgMuted, textAlign: 'center', marginTop: space.s4 },
+    lead: { ...ty.base, fontFamily: fontFamily.sans, color: c.fgMuted, textAlign: 'center', marginTop: space.s4 },
     leadStrong: { fontFamily: fontFamily.sansSemibold, color: c.fg },
     qrCard: {
       padding: space.s6,
@@ -216,7 +218,7 @@ function makeStyles(c: Colors) {
       alignSelf: 'stretch',
     },
     primaryBtnRow: { flexDirection: 'row', gap: space.s3 },
-    primaryText: { ...t.base, fontFamily: fontFamily.sansSemibold, color: c.inkButtonText },
+    primaryText: { ...ty.base, fontFamily: fontFamily.sansSemibold, color: c.inkButtonText },
     ghostBtn: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -224,15 +226,15 @@ function makeStyles(c: Colors) {
       gap: space.s3,
       minHeight: target.min,
     },
-    ghostText: { ...t.base, fontFamily: fontFamily.sans, color: c.fg },
-    fineprint: { ...t.sm, fontFamily: fontFamily.sans, color: c.fgSubtle, textAlign: 'center', lineHeight: 20 },
+    ghostText: { ...ty.base, fontFamily: fontFamily.sans, color: c.fg },
+    fineprint: { ...ty.sm, fontFamily: fontFamily.sans, color: c.fgSubtle, textAlign: 'center', lineHeight: 20 },
 
     scanWrap: { flex: 1, alignItems: 'center', gap: space.s5 },
     camera: { width: '86%', aspectRatio: 1, borderRadius: radius.lg, overflow: 'hidden', marginTop: space.s5 },
-    hint: { ...t.sm, fontFamily: fontFamily.sans, color: c.fgMuted, textAlign: 'center' },
+    hint: { ...ty.sm, fontFamily: fontFamily.sans, color: c.fgMuted, textAlign: 'center' },
 
     deniedWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingHorizontal: space.s7, gap: space.s5 },
-    deniedTitle: { ...t.md, fontFamily: fontFamily.sansSemibold, color: c.fg, textAlign: 'center' },
-    deniedBody: { ...t.base, fontFamily: fontFamily.sans, color: c.fgMuted, textAlign: 'center', lineHeight: 22 },
+    deniedTitle: { ...ty.md, fontFamily: fontFamily.sansSemibold, color: c.fg, textAlign: 'center' },
+    deniedBody: { ...ty.base, fontFamily: fontFamily.sans, color: c.fgMuted, textAlign: 'center', lineHeight: 22 },
   });
 }
