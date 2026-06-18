@@ -32,10 +32,11 @@ import {
   space,
   radius,
   target,
-  type as t,
+  type as ty,
   hairline,
   type Colors,
 } from '../theme';
+import { t } from '../i18n';
 
 export function useReducedMotion(): boolean {
   const [reduced, setReduced] = useState(false);
@@ -104,7 +105,7 @@ export function useActionMenu(): {
       statusBarTranslucent
       onRequestClose={close}
     >
-      <Pressable style={s.sheetOverlay} onPress={close} accessibilityRole="button" accessibilityLabel="Close menu">
+      <Pressable style={s.sheetOverlay} onPress={close} accessibilityRole="button" accessibilityLabel={t('dialogs.closeMenu')}>
         <Pressable style={s.sheet} onPress={(e) => e.stopPropagation()}>
           {state.title ? (
             <Text style={s.sheetTitle} accessibilityRole="header">
@@ -126,9 +127,9 @@ export function useActionMenu(): {
             style={({ pressed }) => [s.sheetCancel, pressed && s.pressed]}
             onPress={close}
             accessibilityRole="button"
-            accessibilityLabel="Cancel"
+            accessibilityLabel={t('common.cancel')}
           >
-            <Text style={s.sheetCancelText}>Cancel</Text>
+            <Text style={s.sheetCancelText}>{t('common.cancel')}</Text>
           </Pressable>
         </Pressable>
       </Pressable>
@@ -199,7 +200,7 @@ export function usePrompt(): {
       onRequestClose={close}
     >
       <KeyboardAvoidingView style={s.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <Pressable style={s.centerOverlay} onPress={close} accessibilityRole="button" accessibilityLabel="Cancel">
+        <Pressable style={s.centerOverlay} onPress={close} accessibilityRole="button" accessibilityLabel={t('common.cancel')}>
           <Pressable style={s.card} onPress={(e) => e.stopPropagation()}>
             <Text style={s.cardTitle} accessibilityRole="header">
               {state.title}
@@ -220,17 +221,17 @@ export function usePrompt(): {
               accessibilityLabel={state.title}
             />
             <View style={s.cardActions}>
-              <Pressable style={({ pressed }) => [s.btnGhost, pressed && s.pressed]} onPress={close} accessibilityRole="button" accessibilityLabel="Cancel">
-                <Text style={s.btnGhostText}>Cancel</Text>
+              <Pressable style={({ pressed }) => [s.btnGhost, pressed && s.pressed]} onPress={close} accessibilityRole="button" accessibilityLabel={t('common.cancel')}>
+                <Text style={s.btnGhostText}>{t('common.cancel')}</Text>
               </Pressable>
               <Pressable
                 style={({ pressed }) => [s.btnPrimary, !canSubmit && s.btnDisabled, pressed && s.pressed]}
                 onPress={submit}
                 disabled={!canSubmit}
                 accessibilityRole="button"
-                accessibilityLabel={state.confirmLabel ?? 'Save'}
+                accessibilityLabel={state.confirmLabel ?? t('common.save')}
               >
-                <Text style={s.btnPrimaryText}>{state.confirmLabel ?? 'Save'}</Text>
+                <Text style={s.btnPrimaryText}>{state.confirmLabel ?? t('common.save')}</Text>
               </Pressable>
             </View>
           </Pressable>
@@ -282,23 +283,23 @@ export function useConfirm(): {
       statusBarTranslucent
       onRequestClose={close}
     >
-      <Pressable style={s.centerOverlay} onPress={close} accessibilityRole="button" accessibilityLabel="Cancel">
+      <Pressable style={s.centerOverlay} onPress={close} accessibilityRole="button" accessibilityLabel={t('common.cancel')}>
         <Pressable style={s.card} onPress={(e) => e.stopPropagation()}>
           <Text style={s.cardTitle} accessibilityRole="header">
             {state.title}
           </Text>
           {state.message ? <Text style={s.cardMessage}>{state.message}</Text> : null}
           <View style={s.cardActions}>
-            <Pressable style={({ pressed }) => [s.btnGhost, pressed && s.pressed]} onPress={close} accessibilityRole="button" accessibilityLabel="Cancel">
-              <Text style={s.btnGhostText}>Cancel</Text>
+            <Pressable style={({ pressed }) => [s.btnGhost, pressed && s.pressed]} onPress={close} accessibilityRole="button" accessibilityLabel={t('common.cancel')}>
+              <Text style={s.btnGhostText}>{t('common.cancel')}</Text>
             </Pressable>
             <Pressable
               style={({ pressed }) => [s.btnPrimary, state.destructive && s.btnDanger, pressed && s.pressed]}
               onPress={confirm}
               accessibilityRole="button"
-              accessibilityLabel={state.confirmLabel ?? 'Confirm'}
+              accessibilityLabel={state.confirmLabel ?? t('common.confirm')}
             >
-              <Text style={[s.btnPrimaryText, state.destructive && s.btnDangerText]}>{state.confirmLabel ?? 'Confirm'}</Text>
+              <Text style={[s.btnPrimaryText, state.destructive && s.btnDangerText]}>{state.confirmLabel ?? t('common.confirm')}</Text>
             </Pressable>
           </View>
         </Pressable>
@@ -326,9 +327,9 @@ function makeStyles(c: Colors) {
       paddingVertical: space.s4,
       paddingBottom: space.s7,
     },
-    sheetTitle: { ...t.sm, fontFamily: fontFamily.sans, color: c.fgMuted, textAlign: 'center', paddingVertical: space.s4 },
+    sheetTitle: { ...ty.sm, fontFamily: fontFamily.sans, color: c.fgMuted, textAlign: 'center', paddingVertical: space.s4 },
     sheetRow: { minHeight: target.min, justifyContent: 'center', paddingHorizontal: space.s7, paddingVertical: space.s4 },
-    sheetRowText: { ...t.base, fontFamily: fontFamily.sans, color: c.fg, textAlign: 'center' },
+    sheetRowText: { ...ty.base, fontFamily: fontFamily.sans, color: c.fg, textAlign: 'center' },
     sheetRowDanger: { color: c.danger },
     sheetCancel: {
       minHeight: target.min,
@@ -339,7 +340,7 @@ function makeStyles(c: Colors) {
       borderTopColor: c.hairline,
       paddingTop: space.s4,
     },
-    sheetCancelText: { ...t.base, fontFamily: fontFamily.sansSemibold, color: c.fgMuted, textAlign: 'center' },
+    sheetCancelText: { ...ty.base, fontFamily: fontFamily.sansSemibold, color: c.fgMuted, textAlign: 'center' },
 
     centerOverlay: { flex: 1, backgroundColor: c.bgScrim, justifyContent: 'center', alignItems: 'center', padding: space.s7 },
     card: {
@@ -351,10 +352,10 @@ function makeStyles(c: Colors) {
       borderColor: c.hairline,
       padding: space.s7,
     },
-    cardTitle: { ...t.md, fontFamily: fontFamily.sansSemibold, color: c.fg, marginBottom: space.s3 },
-    cardMessage: { ...t.sm, fontFamily: fontFamily.sans, color: c.fgMuted, marginBottom: space.s4 },
+    cardTitle: { ...ty.md, fontFamily: fontFamily.sansSemibold, color: c.fg, marginBottom: space.s3 },
+    cardMessage: { ...ty.sm, fontFamily: fontFamily.sans, color: c.fgMuted, marginBottom: space.s4 },
     input: {
-      ...t.base,
+      ...ty.base,
       fontFamily: fontFamily.sans,
       color: c.fg,
       borderWidth: hairline,
@@ -367,9 +368,9 @@ function makeStyles(c: Colors) {
     },
     cardActions: { flexDirection: 'row', justifyContent: 'flex-end', alignItems: 'center' },
     btnGhost: { minHeight: target.min, justifyContent: 'center', paddingHorizontal: space.s5, marginRight: space.s3 },
-    btnGhostText: { ...t.base, fontFamily: fontFamily.sans, color: c.fgMuted },
+    btnGhostText: { ...ty.base, fontFamily: fontFamily.sans, color: c.fgMuted },
     btnPrimary: { minHeight: target.min, justifyContent: 'center', backgroundColor: c.inkButton, borderRadius: radius.md, paddingHorizontal: space.s7 },
-    btnPrimaryText: { ...t.base, fontFamily: fontFamily.sansSemibold, color: c.inkButtonText },
+    btnPrimaryText: { ...ty.base, fontFamily: fontFamily.sansSemibold, color: c.inkButtonText },
     btnDanger: { backgroundColor: c.dangerBg },
     btnDangerText: { color: c.danger },
     btnDisabled: { opacity: 0.4 },

@@ -36,12 +36,13 @@ import { currencyLabel, symbolFor, decimalsFor } from '../data/currencies';
 import { useRate } from '../data/fx';
 import { payersTotal } from '../math/split';
 import { activeMembers, memberName, formatDate } from '../lib/format';
-import { useTheme, fontFamily, space, radius, target, type as t, hairline, type Colors } from '../theme';
+import { useTheme, fontFamily, space, radius, target, type as ty, hairline, type Colors } from '../theme';
 import { Button, EmptyState } from '../components/ui';
 import { useConfirm, usePrompt, useActionMenu } from '../components/Dialogs';
 import { CurrencyPicker } from '../components/CurrencyPicker';
 import { PayerEditor } from '../components/PayerEditor';
 import { SplitEditor } from '../components/SplitEditor';
+import { t } from '../i18n';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AddEditExpense'>;
 
@@ -133,32 +134,32 @@ export default function AddEditExpenseScreen({ navigation, route }: Props) {
 
   // ---- summaries -----------------------------------------------------------
   const payerSummary = useMemo(() => {
-    if (effectivePayers.length === 0) return 'Choose who paid';
+    if (effectivePayers.length === 0) return t('expense.choosePaid');
     if (effectivePayers.length === 1) {
       const id = effectivePayers[0].memberId;
-      return id === meId ? 'You' : memberName(group!, id);
+      return id === meId ? t('expense.you') : memberName(group!, id);
     }
-    return `${effectivePayers.length} people`;
+    return t('expense.peopleCount', { count: effectivePayers.length });
   }, [effectivePayers, group, meId]);
 
   const splitSummary = useMemo(() => {
     const n = splits.length;
     const label =
       splitMethod === 'equal'
-        ? 'Equally'
+        ? t('expense.equally')
         : splitMethod === 'exact'
-          ? 'Exact amounts'
+          ? t('expense.exactAmounts')
           : splitMethod === 'shares'
-            ? 'By shares'
-            : 'By percent';
-    if (n === 0) return 'Choose a split';
-    return `${label} between ${n}`;
+            ? t('expense.byShares')
+            : t('expense.byPercent');
+    if (n === 0) return t('expense.chooseSplit');
+    return t('expense.splitBetween', { label, count: n });
   }, [splits, splitMethod]);
 
   if (!group) {
     return (
       <View style={[s.screen, { paddingTop: insets.top }]}>
-        <EmptyState title="Group not found" />
+        <EmptyState title={t('group.notFound')} />
       </View>
     );
   }
@@ -192,9 +193,9 @@ export default function AddEditExpenseScreen({ navigation, route }: Props) {
 
   const onDelete = () =>
     confirm.open({
-      title: 'Delete this expense?',
-      message: 'It will be removed for everyone in the group.',
-      confirmLabel: 'Delete',
+      title: t('expense.deleteTitle'),
+      message: t('expense.deleteMessage'),
+      confirmLabel: t('common.delete'),
       destructive: true,
       onConfirm: () => {
         if (expenseId) deleteExpense(groupId, expenseId);
@@ -210,11 +211,11 @@ export default function AddEditExpenseScreen({ navigation, route }: Props) {
 
   const openRateOverride = () => {
     ratePrompt.open({
-      title: 'Set the rate',
-      message: `Units of ${baseCurrency} per 1 ${currency}.`,
+      title: t('expense.rateTitle'),
+      message: t('expense.rateMessage', { base: baseCurrency, currency }),
       keyboardType: 'decimal-pad',
       initialValue: String(effectiveRate),
-      confirmLabel: 'Use this rate',
+      confirmLabel: t('expense.useRate'),
       onSubmit: (txt) => {
         const r = Number(txt.replace(',', '.'));
         if (Number.isFinite(r) && r > 0) setManualRate(r);
@@ -225,16 +226,16 @@ export default function AddEditExpenseScreen({ navigation, route }: Props) {
   // ---- receipt photo (local-only; never synced — see data/types.ts) -------
   const notifyDenied = (what: string) =>
     permissionInfo.open({
-      title: `${what} is off`,
-      message: `Split Expenses can't use your ${what.toLowerCase()} until you allow it in Settings. Your photo stays on this device.`,
-      confirmLabel: 'OK',
+      title: t('expense.permOff', { what }),
+      message: t('expense.permMessage', { what: what.toLowerCase() }),
+      confirmLabel: t('common.ok'),
       onConfirm: () => {},
     });
 
   const takePhoto = async () => {
     const perm = await ImagePicker.requestCameraPermissionsAsync();
     if (!perm.granted) {
-      notifyDenied('Camera');
+      notifyDenied(t('expense.camera'));
       return;
     }
     const result = await ImagePicker.launchCameraAsync({ quality: 0.6 });
@@ -244,7 +245,7 @@ export default function AddEditExpenseScreen({ navigation, route }: Props) {
   const choosePhoto = async () => {
     const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!perm.granted) {
-      notifyDenied('Photo access');
+      notifyDenied(t('expense.photoAccess'));
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], quality: 0.6 });
@@ -253,12 +254,12 @@ export default function AddEditExpenseScreen({ navigation, route }: Props) {
 
   const openReceiptMenu = () =>
     receiptMenu.open({
-      title: receiptUri ? 'Receipt photo' : 'Attach receipt',
+      title: receiptUri ? t('expense.receiptPhoto') : t('expense.attachReceipt'),
       options: [
-        { label: 'Take photo', onPress: () => void takePhoto() },
-        { label: 'Choose photo', onPress: () => void choosePhoto() },
+        { label: t('expense.takePhoto'), onPress: () => void takePhoto() },
+        { label: t('expense.choosePhoto'), onPress: () => void choosePhoto() },
         ...(receiptUri
-          ? [{ label: 'Remove', destructive: true, onPress: () => setReceiptUri(undefined) }]
+          ? [{ label: t('common.remove'), destructive: true, onPress: () => setReceiptUri(undefined) }]
           : []),
       ],
     });
@@ -266,14 +267,14 @@ export default function AddEditExpenseScreen({ navigation, route }: Props) {
   return (
     <View style={[s.screen, { paddingTop: insets.top + space.s2 }]}>
       <View style={s.header}>
-        <Pressable onPress={() => navigation.goBack()} accessibilityRole="button" accessibilityLabel="Cancel" hitSlop={8}>
+        <Pressable onPress={() => navigation.goBack()} accessibilityRole="button" accessibilityLabel={t('common.cancel')} hitSlop={8}>
           <X size={24} color={c.fgMuted} />
         </Pressable>
         <Text style={s.title} accessibilityRole="header">
-          {isEdit ? 'Edit expense' : 'New expense'}
+          {isEdit ? t('expense.editTitle') : t('expense.newTitle')}
         </Text>
         {isEdit ? (
-          <Pressable onPress={onDelete} accessibilityRole="button" accessibilityLabel="Delete expense" hitSlop={8}>
+          <Pressable onPress={onDelete} accessibilityRole="button" accessibilityLabel={t('expense.deleteExpenseA11y')} hitSlop={8}>
             <Trash2 size={22} color={c.danger} />
           </Pressable>
         ) : (
@@ -296,57 +297,60 @@ export default function AddEditExpenseScreen({ navigation, route }: Props) {
               placeholderTextColor={c.fgSubtle}
               keyboardType="decimal-pad"
               autoFocus={!isEdit}
-              accessibilityLabel="Amount"
+              accessibilityLabel={t('expense.amount')}
             />
-            <Pressable onPress={() => setPickingCurrency(true)} accessibilityRole="button" accessibilityLabel={`Currency ${currency}`} style={({ pressed }) => [s.currencyChip, pressed && { opacity: 0.6 }]}>
+            <Pressable onPress={() => setPickingCurrency(true)} accessibilityRole="button" accessibilityLabel={t('expense.currencyA11y', { code: currency })} style={({ pressed }) => [s.currencyChip, pressed && { opacity: 0.6 }]}>
               <Text style={s.currencyChipText}>{currencyLabel(currency)}</Text>
             </Pressable>
           </View>
 
           {foreign ? (
-            <Pressable onPress={openRateOverride} accessibilityRole="button" accessibilityLabel="Change exchange rate" style={({ pressed }) => [s.rateLine, pressed && { opacity: 0.6 }]}>
+            <Pressable onPress={openRateOverride} accessibilityRole="button" accessibilityLabel={t('expense.changeRate')} style={({ pressed }) => [s.rateLine, pressed && { opacity: 0.6 }]}>
               <Text style={s.rateText}>
                 1 {currency} = {effectiveRate.toFixed(4)} {baseCurrency} ·{' '}
-                {manualRate != null ? 'manual' : fx.source}
+                {manualRate != null ? t('expense.manual') : fx.source}
               </Text>
               {fx.source === 'fallback' && manualRate == null ? (
-                <Text style={[s.rateWarn, { color: c.warning }]}>rates may be offline — tap to set</Text>
+                <Text style={[s.rateWarn, { color: c.warning }]}>{t('expense.ratesOffline')}</Text>
               ) : null}
             </Pressable>
           ) : null}
 
           {/* Description */}
-          <Text style={s.label}>Description</Text>
+          <Text style={s.label}>{t('expense.description')}</Text>
           <TextInput
             style={s.input}
             value={description}
             onChangeText={setDescription}
-            placeholder="What was it for?"
+            placeholder={t('expense.descPlaceholder')}
             placeholderTextColor={c.fgSubtle}
             returnKeyType="done"
           />
 
           {/* Paid by */}
-          <Text style={s.label}>Paid by</Text>
-          <Pressable onPress={() => setEditingPayers(true)} accessibilityRole="button" accessibilityLabel={`Paid by ${payerSummary}`} style={({ pressed }) => [s.selectRow, pressed && { opacity: 0.6 }]}>
+          <Text style={s.label}>{t('expense.paidBy')}</Text>
+          <Pressable onPress={() => setEditingPayers(true)} accessibilityRole="button" accessibilityLabel={t('expense.paidByA11y', { summary: payerSummary })} style={({ pressed }) => [s.selectRow, pressed && { opacity: 0.6 }]}>
             <Text style={s.selectValue}>{payerSummary}</Text>
             <Text style={s.chevron}>›</Text>
           </Pressable>
           {showPayerHint && !payersMatch ? (
             <Text style={[s.inlineHint, { color: c.warning }]}>
-              The payers add up to {formatMoney(paidSum, currency)}, but the expense is {formatMoney(amountMinor, currency)}.
+              {t('expense.payersMismatch', {
+                paid: formatMoney(paidSum, currency),
+                amount: formatMoney(amountMinor, currency),
+              })}
             </Text>
           ) : null}
 
           {/* Split */}
-          <Text style={s.label}>Split</Text>
-          <Pressable onPress={() => setEditingSplit(true)} accessibilityRole="button" accessibilityLabel={`Split ${splitSummary}`} style={({ pressed }) => [s.selectRow, pressed && { opacity: 0.6 }]}>
+          <Text style={s.label}>{t('expense.split')}</Text>
+          <Pressable onPress={() => setEditingSplit(true)} accessibilityRole="button" accessibilityLabel={t('expense.splitA11y', { summary: splitSummary })} style={({ pressed }) => [s.selectRow, pressed && { opacity: 0.6 }]}>
             <Text style={s.selectValue}>{splitSummary}</Text>
             <Text style={s.chevron}>›</Text>
           </Pressable>
 
           {/* Category */}
-          <Text style={s.label}>Category</Text>
+          <Text style={s.label}>{t('expense.category')}</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={s.catScroll}>
             {CATEGORIES.map((cat) => {
               const on = cat.key === categoryKey;
@@ -368,8 +372,8 @@ export default function AddEditExpenseScreen({ navigation, route }: Props) {
           </ScrollView>
 
           {/* Date */}
-          <Text style={s.label}>Date</Text>
-          <Pressable onPress={() => setShowDate((v) => !v)} accessibilityRole="button" accessibilityLabel={`Date ${formatDate(date.getTime())}`} style={({ pressed }) => [s.selectRow, pressed && { opacity: 0.6 }]}>
+          <Text style={s.label}>{t('expense.date')}</Text>
+          <Pressable onPress={() => setShowDate((v) => !v)} accessibilityRole="button" accessibilityLabel={t('expense.dateA11y', { date: formatDate(date.getTime()) })} style={({ pressed }) => [s.selectRow, pressed && { opacity: 0.6 }]}>
             <Text style={s.selectValue}>{formatDate(date.getTime())}</Text>
             <Text style={s.chevron}>›</Text>
           </Pressable>
@@ -384,12 +388,12 @@ export default function AddEditExpenseScreen({ navigation, route }: Props) {
           ) : null}
 
           {/* Note */}
-          <Text style={s.label}>Note</Text>
+          <Text style={s.label}>{t('expense.note')}</Text>
           <TextInput
             style={[s.input, s.noteInput]}
             value={note}
             onChangeText={setNote}
-            placeholder="Optional"
+            placeholder={t('expense.optional')}
             placeholderTextColor={c.fgSubtle}
             multiline
           />
@@ -404,13 +408,13 @@ export default function AddEditExpenseScreen({ navigation, route }: Props) {
             <Pressable
               onPress={openReceiptMenu}
               accessibilityRole="button"
-              accessibilityLabel="Receipt photo. Tap to change or remove."
+              accessibilityLabel={t('expense.receiptPhotoA11y')}
               style={({ pressed }) => [s.receiptRow, pressed && { opacity: 0.6 }]}
             >
               <Image source={{ uri: receiptUri }} style={s.receiptThumb} accessibilityIgnoresInvertColors />
               <View style={{ flex: 1 }}>
-                <Text style={s.scanText}>Receipt attached</Text>
-                <Text style={s.receiptHint}>Stays on this device · tap to change</Text>
+                <Text style={s.scanText}>{t('expense.receiptAttached')}</Text>
+                <Text style={s.receiptHint}>{t('expense.receiptHint')}</Text>
               </View>
               <Text style={s.chevron}>›</Text>
             </Pressable>
@@ -418,16 +422,16 @@ export default function AddEditExpenseScreen({ navigation, route }: Props) {
             <Pressable
               onPress={openReceiptMenu}
               accessibilityRole="button"
-              accessibilityLabel="Attach receipt"
+              accessibilityLabel={t('expense.attachReceipt')}
               style={({ pressed }) => [s.scanRow, pressed && { opacity: 0.6 }]}
             >
               <Camera size={18} color={c.fgMuted} />
-              <Text style={s.scanText}>Attach receipt</Text>
+              <Text style={s.scanText}>{t('expense.attachReceipt')}</Text>
             </Pressable>
           )}
 
           <Button
-            label={isEdit ? 'Save changes' : 'Add expense'}
+            label={isEdit ? t('expense.saveChanges') : t('expense.addExpense')}
             onPress={onSave}
             disabled={!canSave}
             style={{ marginTop: space.s6 }}
@@ -483,7 +487,7 @@ function makeStyles(c: Colors) {
     flex: { flex: 1 },
     screen: { flex: 1, backgroundColor: c.bg, paddingHorizontal: space.s5 },
     header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: space.s4 },
-    title: { ...t.md, fontFamily: fontFamily.sansSemibold, color: c.fg },
+    title: { ...ty.md, fontFamily: fontFamily.sansSemibold, color: c.fg },
 
     amountRow: { flexDirection: 'row', alignItems: 'center', gap: space.s3, paddingVertical: space.s4 },
     amountSymbol: {
@@ -511,15 +515,15 @@ function makeStyles(c: Colors) {
       alignItems: 'center',
       justifyContent: 'center',
     },
-    currencyChipText: { ...t.base, fontFamily: fontFamily.sansSemibold, color: c.fg },
+    currencyChipText: { ...ty.base, fontFamily: fontFamily.sansSemibold, color: c.fg },
 
     rateLine: { paddingBottom: space.s3, gap: 2 },
-    rateText: { ...t.sm, fontFamily: fontFamily.sans, color: c.fgMuted },
-    rateWarn: { ...t.xs, fontFamily: fontFamily.sansMedium },
+    rateText: { ...ty.sm, fontFamily: fontFamily.sans, color: c.fgMuted },
+    rateWarn: { ...ty.xs, fontFamily: fontFamily.sansMedium },
 
-    label: { ...t.sm, fontFamily: fontFamily.sansSemibold, color: c.fgMuted, marginTop: space.s5, marginBottom: space.s3 },
+    label: { ...ty.sm, fontFamily: fontFamily.sansSemibold, color: c.fgMuted, marginTop: space.s5, marginBottom: space.s3 },
     input: {
-      ...t.base,
+      ...ty.base,
       fontFamily: fontFamily.sans,
       color: c.fg,
       borderWidth: hairline,
@@ -541,9 +545,9 @@ function makeStyles(c: Colors) {
       paddingHorizontal: space.s5,
       minHeight: target.min,
     },
-    selectValue: { ...t.base, fontFamily: fontFamily.sansMedium, color: c.fg },
+    selectValue: { ...ty.base, fontFamily: fontFamily.sansMedium, color: c.fg },
     chevron: { fontSize: 24, lineHeight: 26, color: c.fgSubtle, fontFamily: fontFamily.sans },
-    inlineHint: { ...t.sm, fontFamily: fontFamily.sansMedium, marginTop: space.s3 },
+    inlineHint: { ...ty.sm, fontFamily: fontFamily.sansMedium, marginTop: space.s3 },
 
     catScroll: { gap: space.s3, paddingRight: space.s5 },
     catChip: {
@@ -557,13 +561,13 @@ function makeStyles(c: Colors) {
       height: 36,
     },
     catChipOn: { backgroundColor: c.appAccentBg, borderColor: c.appAccent },
-    catChipText: { ...t.sm, fontFamily: fontFamily.sansMedium, color: c.fgMuted },
+    catChipText: { ...ty.sm, fontFamily: fontFamily.sansMedium, color: c.fgMuted },
     catChipTextOn: { color: c.appAccent },
 
     datePanel: { marginTop: space.s3, alignItems: 'flex-start' },
 
     scanRow: { flexDirection: 'row', alignItems: 'center', gap: space.s3, paddingVertical: space.s5, marginTop: space.s4 },
-    scanText: { ...t.sm, fontFamily: fontFamily.sansMedium, color: c.fg },
+    scanText: { ...ty.sm, fontFamily: fontFamily.sansMedium, color: c.fg },
     receiptRow: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -575,6 +579,6 @@ function makeStyles(c: Colors) {
       marginTop: space.s4,
     },
     receiptThumb: { width: 44, height: 44, borderRadius: radius.sm, backgroundColor: c.bgElevated },
-    receiptHint: { ...t.xs, fontFamily: fontFamily.sans, color: c.fgMuted, marginTop: 1 },
+    receiptHint: { ...ty.xs, fontFamily: fontFamily.sans, color: c.fgMuted, marginTop: 1 },
   });
 }

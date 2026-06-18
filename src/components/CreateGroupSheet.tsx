@@ -24,10 +24,11 @@ import { X, Plus } from 'lucide-react-native';
 import { useGroups } from '../store/groups';
 import { getSetting, setSetting } from '../store/db';
 import { currency, currencyLabel } from '../data/currencies';
-import { useTheme, fontFamily, space, radius, target, type as t, hairline, type Colors } from '../theme';
+import { useTheme, fontFamily, space, radius, target, type as ty, hairline, type Colors } from '../theme';
 import { Button } from './ui';
 import { CurrencyPicker } from './CurrencyPicker';
 import { useReducedMotion } from './Dialogs';
+import { t } from '../i18n';
 
 const LAST_CURRENCY_KEY = 'last_base_currency';
 
@@ -100,34 +101,34 @@ export function CreateGroupSheet({
       <KeyboardAvoidingView style={s.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={[s.screen, { paddingTop: insets.top + space.s4 }]}>
           <View style={s.header}>
-            <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel="Close" hitSlop={8}>
+            <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel={t('common.close')} hitSlop={8}>
               <X size={24} color={c.fgMuted} />
             </Pressable>
             <Text style={s.title} accessibilityRole="header">
-              New group
+              {t('groups.newGroup')}
             </Text>
             <View style={{ width: 24 }} />
           </View>
 
           <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + space.s7 }} keyboardShouldPersistTaps="handled">
-            <Text style={s.label}>Group name</Text>
+            <Text style={s.label}>{t('create.groupName')}</Text>
             <TextInput
               style={s.input}
               value={name}
               onChangeText={setName}
-              placeholder="Lisbon trip, Apartment, …"
+              placeholder={t('create.groupNamePlaceholder')}
               placeholderTextColor={c.fgSubtle}
               autoFocus
               returnKeyType="next"
             />
 
-            <Text style={s.label}>Currency</Text>
+            <Text style={s.label}>{t('currency.title')}</Text>
             <Pressable onPress={() => setPickingCurrency(true)} accessibilityRole="button" style={({ pressed }) => [s.input, s.currencyRow, pressed && { opacity: 0.6 }]}>
               <Text style={s.currencyCode}>{currencyLabel(base)}</Text>
               <Text style={s.currencyName}>{currency(base).name}</Text>
             </Pressable>
 
-            <Text style={s.label}>People</Text>
+            <Text style={s.label}>{t('create.people')}</Text>
             {names.map((n, i) => {
               const isMe = meIndex === i;
               const hasName = n.trim().length > 0;
@@ -137,7 +138,7 @@ export function CreateGroupSheet({
                     style={[s.input, s.personInput]}
                     value={n}
                     onChangeText={(v) => setNameAt(i, v)}
-                    placeholder={`Person ${i + 1}`}
+                    placeholder={t('create.personN', { n: i + 1 })}
                     placeholderTextColor={c.fgSubtle}
                     returnKeyType="next"
                   />
@@ -145,14 +146,18 @@ export function CreateGroupSheet({
                     onPress={() => setMeIndex(isMe ? null : i)}
                     disabled={!hasName}
                     accessibilityRole="button"
-                    accessibilityLabel={isMe ? `${n} is you` : `Mark ${n || 'this person'} as you`}
+                    accessibilityLabel={
+                      isMe
+                        ? t('create.isYouA11y', { name: n })
+                        : t('create.markYouA11y', { name: n || t('members.thisPerson') })
+                    }
                     accessibilityState={{ selected: isMe }}
                     style={({ pressed }) => [s.mePill, isMe && s.mePillOn, !hasName && { opacity: 0.35 }, pressed && { opacity: 0.6 }]}
                   >
-                    <Text style={[s.mePillText, isMe && s.mePillTextOn]}>me</Text>
+                    <Text style={[s.mePillText, isMe && s.mePillTextOn]}>{t('create.me')}</Text>
                   </Pressable>
                   {names.length > 1 ? (
-                    <Pressable onPress={() => removeRow(i)} accessibilityRole="button" accessibilityLabel={`Remove person ${i + 1}`} hitSlop={8} style={s.removeBtn}>
+                    <Pressable onPress={() => removeRow(i)} accessibilityRole="button" accessibilityLabel={t('create.removePersonA11y', { n: i + 1 })} hitSlop={8} style={s.removeBtn}>
                       <X size={18} color={c.fgSubtle} />
                     </Pressable>
                   ) : (
@@ -161,18 +166,16 @@ export function CreateGroupSheet({
                 </View>
               );
             })}
-            <Pressable onPress={addRow} accessibilityRole="button" accessibilityLabel="Add another person" style={({ pressed }) => [s.addRow, pressed && { opacity: 0.6 }]}>
+            <Pressable onPress={addRow} accessibilityRole="button" accessibilityLabel={t('create.addAnother')} style={({ pressed }) => [s.addRow, pressed && { opacity: 0.6 }]}>
               <Plus size={18} color={c.appAccent} />
-              <Text style={s.addRowText}>Add person</Text>
+              <Text style={s.addRowText}>{t('members.addPerson')}</Text>
             </Pressable>
 
             <Text style={[s.hint, !meChosen && { color: c.appAccent }]}>
-              {meChosen
-                ? 'You can change which person is you later.'
-                : 'Tap “me” next to your own name — required, so your balance is right.'}
+              {meChosen ? t('create.hintChosen') : t('create.hintChoose')}
             </Text>
 
-            <Button label="Create group" onPress={create} disabled={!canCreate} style={{ marginTop: space.s6 }} />
+            <Button label={t('create.createGroup')} onPress={create} disabled={!canCreate} style={{ marginTop: space.s6 }} />
           </ScrollView>
         </View>
       </KeyboardAvoidingView>
@@ -187,10 +190,10 @@ function makeStyles(c: Colors) {
     flex: { flex: 1 },
     screen: { flex: 1, backgroundColor: c.bg, paddingHorizontal: space.s5 },
     header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: space.s5 },
-    title: { ...t.md, fontFamily: fontFamily.sansSemibold, color: c.fg },
-    label: { ...t.sm, fontFamily: fontFamily.sansSemibold, color: c.fgMuted, marginTop: space.s5, marginBottom: space.s3 },
+    title: { ...ty.md, fontFamily: fontFamily.sansSemibold, color: c.fg },
+    label: { ...ty.sm, fontFamily: fontFamily.sansSemibold, color: c.fgMuted, marginTop: space.s5, marginBottom: space.s3 },
     input: {
-      ...t.base,
+      ...ty.base,
       fontFamily: fontFamily.sans,
       color: c.fg,
       borderWidth: hairline,
@@ -201,17 +204,17 @@ function makeStyles(c: Colors) {
       justifyContent: 'center',
     },
     currencyRow: { flexDirection: 'row', alignItems: 'center', gap: space.s4 },
-    currencyCode: { ...t.base, fontFamily: fontFamily.sansSemibold, color: c.fg },
-    currencyName: { ...t.base, fontFamily: fontFamily.sans, color: c.fgMuted },
+    currencyCode: { ...ty.base, fontFamily: fontFamily.sansSemibold, color: c.fg },
+    currencyName: { ...ty.base, fontFamily: fontFamily.sans, color: c.fgMuted },
     personRow: { flexDirection: 'row', alignItems: 'center', gap: space.s3, marginBottom: space.s3 },
     personInput: { flex: 1 },
     mePill: { paddingHorizontal: space.s4, height: 32, borderRadius: radius.pill, borderWidth: hairline, borderColor: c.hairlineStrong, alignItems: 'center', justifyContent: 'center' },
     mePillOn: { backgroundColor: c.appAccentBg, borderColor: c.appAccent },
-    mePillText: { ...t.sm, fontFamily: fontFamily.sansMedium, color: c.fgMuted },
+    mePillText: { ...ty.sm, fontFamily: fontFamily.sansMedium, color: c.fgMuted },
     mePillTextOn: { color: c.appAccent },
     removeBtn: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
     addRow: { flexDirection: 'row', alignItems: 'center', gap: space.s3, paddingVertical: space.s4 },
-    addRowText: { ...t.base, fontFamily: fontFamily.sansMedium, color: c.appAccent },
-    hint: { ...t.sm, fontFamily: fontFamily.sans, color: c.fgSubtle, marginTop: space.s4 },
+    addRowText: { ...ty.base, fontFamily: fontFamily.sansMedium, color: c.appAccent },
+    hint: { ...ty.sm, fontFamily: fontFamily.sans, color: c.fgSubtle, marginTop: space.s4 },
   });
 }

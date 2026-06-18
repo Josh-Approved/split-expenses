@@ -19,10 +19,11 @@ import { formatMoney } from '../data/money';
 import { category } from '../data/categories';
 import { phraseSelfNet, memberName, activeMembers, formatDate } from '../lib/format';
 import { exportGroupCsv } from '../lib/csv';
-import { useTheme, fontFamily, space, radius, type as t, hairline, type Colors } from '../theme';
+import { useTheme, fontFamily, space, radius, type as ty, hairline, type Colors } from '../theme';
 import { Avatar, EmptyState } from '../components/ui';
 import { useActionMenu, usePrompt, useConfirm } from '../components/Dialogs';
 import { CurrencyPicker } from '../components/CurrencyPicker';
+import { t } from '../i18n';
 import type { Expense, Group } from '../data/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'GroupDetail'>;
@@ -55,7 +56,7 @@ export default function GroupDetailScreen({ navigation, route }: Props) {
   if (!group) {
     return (
       <View style={[s.screen, { paddingTop: insets.top }]}>
-        <EmptyState title="Group not found" />
+        <EmptyState title={t('group.notFound')} />
       </View>
     );
   }
@@ -68,23 +69,23 @@ export default function GroupDetailScreen({ navigation, route }: Props) {
     menu.open({
       title: group.name,
       options: [
-        { label: 'Members', onPress: () => navigation.navigate('Members', { groupId }) },
-        { label: 'Share group', onPress: () => navigation.navigate('Share', { groupId }) },
+        { label: t('group.members'), onPress: () => navigation.navigate('Members', { groupId }) },
+        { label: t('group.shareGroup'), onPress: () => navigation.navigate('Share', { groupId }) },
         {
-          label: 'Rename group',
+          label: t('group.renameTitle'),
           onPress: () =>
-            prompt.open({ title: 'Rename group', initialValue: group.name, selectAll: true, onSubmit: (txt) => renameGroup(groupId, txt) }),
+            prompt.open({ title: t('group.renameTitle'), initialValue: group.name, selectAll: true, onSubmit: (txt) => renameGroup(groupId, txt) }),
         },
-        { label: 'Change currency', onPress: () => setPickingCurrency(true) },
-        { label: 'Export expenses (CSV)', onPress: () => void exportGroupCsv(group) },
+        { label: t('group.changeCurrency'), onPress: () => setPickingCurrency(true) },
+        { label: t('group.exportCsv'), onPress: () => void exportGroupCsv(group) },
         {
-          label: 'Delete group',
+          label: t('group.deleteGroup'),
           destructive: true,
           onPress: () =>
             confirm.open({
-              title: `Delete "${group.name}"?`,
-              message: 'Removes it from this device. Anyone you shared with keeps their copy.',
-              confirmLabel: 'Delete',
+              title: t('group.deleteTitle', { name: group.name }),
+              message: t('group.deleteMessage'),
+              confirmLabel: t('common.delete'),
               destructive: true,
               onConfirm: () => {
                 deleteGroup(groupId);
@@ -99,20 +100,20 @@ export default function GroupDetailScreen({ navigation, route }: Props) {
   return (
     <View style={[s.screen, { paddingTop: insets.top }]}>
       <View style={s.topbar}>
-        <Pressable onPress={() => navigation.goBack()} accessibilityRole="button" accessibilityLabel="Back" hitSlop={8} style={s.iconBtn}>
+        <Pressable onPress={() => navigation.goBack()} accessibilityRole="button" accessibilityLabel={t('common.back')} hitSlop={8} style={s.iconBtn}>
           <Text style={s.backChevron}>‹</Text>
         </Pressable>
         <Text style={s.topTitle} numberOfLines={1} accessibilityRole="header">
           {group.name}
         </Text>
         <View style={s.topActions}>
-          <Pressable onPress={() => navigation.navigate('Members', { groupId })} accessibilityRole="button" accessibilityLabel="Members" hitSlop={8} style={s.iconBtn}>
+          <Pressable onPress={() => navigation.navigate('Members', { groupId })} accessibilityRole="button" accessibilityLabel={t('group.members')} hitSlop={8} style={s.iconBtn}>
             <Users size={20} color={c.fgMuted} />
           </Pressable>
-          <Pressable onPress={() => navigation.navigate('Share', { groupId })} accessibilityRole="button" accessibilityLabel="Share group" hitSlop={8} style={s.iconBtn}>
+          <Pressable onPress={() => navigation.navigate('Share', { groupId })} accessibilityRole="button" accessibilityLabel={t('group.shareGroup')} hitSlop={8} style={s.iconBtn}>
             <Share2 size={20} color={c.fgMuted} />
           </Pressable>
-          <Pressable onPress={openMenu} accessibilityRole="button" accessibilityLabel="More options" hitSlop={8} style={s.iconBtn}>
+          <Pressable onPress={openMenu} accessibilityRole="button" accessibilityLabel={t('group.moreOptions')} hitSlop={8} style={s.iconBtn}>
             <MoreHorizontal size={20} color={c.fgMuted} />
           </Pressable>
         </View>
@@ -122,26 +123,26 @@ export default function GroupDetailScreen({ navigation, route }: Props) {
       <Pressable
         onPress={() => meId && navigation.navigate('SettleUp', { groupId })}
         accessibilityRole="button"
-        accessibilityLabel={selfNet != null ? phraseSelfNet(selfNet, group.baseCurrency) : 'Set who you are to see your balance'}
+        accessibilityLabel={selfNet != null ? phraseSelfNet(selfNet, group.baseCurrency) : t('group.setWhoBalanceA11y')}
         style={s.balanceHeader}
       >
         {meId ? (
           <>
             <Text style={[s.balanceAmount, selfNet === 0 ? { color: c.fgMuted } : selfNet! > 0 ? { color: c.accent } : { color: c.fg }]}>
-              {selfNet === 0 ? 'All settled up' : formatMoney(Math.abs(selfNet!), group.baseCurrency)}
+              {selfNet === 0 ? t('group.allSettledUp') : formatMoney(Math.abs(selfNet!), group.baseCurrency)}
             </Text>
-            {selfNet !== 0 ? <Text style={s.balanceCaption}>{selfNet! > 0 ? "you're owed" : 'you owe'}</Text> : null}
+            {selfNet !== 0 ? <Text style={s.balanceCaption}>{selfNet! > 0 ? t('group.youreOwed') : t('group.youOwe')}</Text> : null}
           </>
         ) : (
           <Pressable onPress={() => navigation.navigate('ClaimMember', { groupId })} style={s.claimPrompt} accessibilityRole="button">
-            <Text style={s.claimText}>Tap to choose which person is you</Text>
+            <Text style={s.claimText}>{t('group.tapChoose')}</Text>
           </Pressable>
         )}
       </Pressable>
 
       {anyOwed ? (
-        <Pressable onPress={() => navigation.navigate('SettleUp', { groupId })} accessibilityRole="button" accessibilityLabel="Settle up" style={({ pressed }) => [s.settleBtn, pressed && { opacity: 0.6 }]}>
-          <Text style={s.settleBtnText}>Settle up</Text>
+        <Pressable onPress={() => navigation.navigate('SettleUp', { groupId })} accessibilityRole="button" accessibilityLabel={t('settle.title')} style={({ pressed }) => [s.settleBtn, pressed && { opacity: 0.6 }]}>
+          <Text style={s.settleBtnText}>{t('settle.title')}</Text>
         </Pressable>
       ) : null}
 
@@ -150,7 +151,7 @@ export default function GroupDetailScreen({ navigation, route }: Props) {
         keyExtractor={(e) => e.id}
         contentContainerStyle={{ padding: space.s5, paddingBottom: insets.bottom + 96 }}
         ListEmptyComponent={
-          <EmptyState title="No expenses yet" message="Add the first thing someone paid for. Splitting is two taps from here." />
+          <EmptyState title={t('group.noExpensesTitle')} message={t('group.noExpensesMessage')} />
         }
         renderItem={({ item }) => (
           <ExpenseRow group={group} expense={item} c={c} s={s} onPress={() => navigation.navigate('AddEditExpense', { groupId, expenseId: item.id })} />
@@ -160,11 +161,11 @@ export default function GroupDetailScreen({ navigation, route }: Props) {
       <Pressable
         onPress={() => navigation.navigate('AddEditExpense', { groupId })}
         accessibilityRole="button"
-        accessibilityLabel="Add expense"
+        accessibilityLabel={t('expense.addExpense')}
         style={({ pressed }) => [s.fab, { bottom: insets.bottom + space.s5 }, pressed && { opacity: 0.85 }]}
       >
         <Plus size={22} color={c.inkButtonText} />
-        <Text style={s.fabText}>Add expense</Text>
+        <Text style={s.fabText}>{t('expense.addExpense')}</Text>
       </Pressable>
 
       <CurrencyPicker visible={pickingCurrency} selected={group.baseCurrency} onPick={(code) => setBaseCurrency(groupId, code)} onClose={() => setPickingCurrency(false)} />
@@ -192,7 +193,11 @@ function ExpenseRow({
   const Icon = (LucideIcons as any)[cat.icon] ?? LucideIcons.Receipt;
   const payerNames = expense.payers.map((p) => memberName(group, p.memberId)).join(', ');
   const splitCount = expense.splits.length;
-  const sub = `${payerNames || 'Someone'} paid · split ${splitCount} way${splitCount === 1 ? '' : 's'}`;
+  const sub = t('group.expenseSub', {
+    payers: payerNames || t('group.someone'),
+    count: splitCount,
+    ways: splitCount === 1 ? t('group.wayOne') : t('group.wayOther'),
+  });
   return (
     <Pressable onPress={onPress} accessibilityRole="button" accessibilityLabel={`${expense.description}, ${formatMoney(expense.amount, expense.currency)}`} style={({ pressed }) => [s.expenseRow, pressed && { opacity: 0.6 }]}>
       <View style={[s.catBadge, { backgroundColor: c.appAccentBg }]}>
@@ -217,23 +222,23 @@ function makeStyles(c: Colors) {
     iconBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
     backChevron: { fontSize: 30, lineHeight: 32, color: c.fg, fontFamily: fontFamily.sans },
     topbar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: space.s4, paddingVertical: space.s3, gap: space.s2 },
-    topTitle: { ...t.md, fontFamily: fontFamily.sansSemibold, color: c.fg, flex: 1 },
+    topTitle: { ...ty.md, fontFamily: fontFamily.sansSemibold, color: c.fg, flex: 1 },
     topActions: { flexDirection: 'row' },
 
     balanceHeader: { alignItems: 'center', paddingTop: space.s5, paddingBottom: space.s4 },
     balanceAmount: { fontSize: 40, lineHeight: 46, fontFamily: fontFamily.sansSemibold, letterSpacing: -0.5 },
-    balanceCaption: { ...t.base, fontFamily: fontFamily.sans, color: c.fgMuted, marginTop: 2 },
+    balanceCaption: { ...ty.base, fontFamily: fontFamily.sans, color: c.fgMuted, marginTop: 2 },
     claimPrompt: { paddingVertical: space.s4 },
-    claimText: { ...t.base, fontFamily: fontFamily.sansMedium, color: c.appAccent },
+    claimText: { ...ty.base, fontFamily: fontFamily.sansMedium, color: c.appAccent },
 
     settleBtn: { alignSelf: 'center', borderWidth: hairline, borderColor: c.hairlineStrong, borderRadius: radius.pill, paddingHorizontal: space.s6, height: 40, alignItems: 'center', justifyContent: 'center', marginBottom: space.s4 },
-    settleBtnText: { ...t.sm, fontFamily: fontFamily.sansSemibold, color: c.fg },
+    settleBtnText: { ...ty.sm, fontFamily: fontFamily.sansSemibold, color: c.fg },
 
     expenseRow: { flexDirection: 'row', alignItems: 'center', gap: space.s4, paddingVertical: space.s4, borderBottomWidth: hairline, borderBottomColor: c.hairline },
     catBadge: { width: 38, height: 38, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
-    expenseTitle: { ...t.base, fontFamily: fontFamily.sansMedium, color: c.fg },
-    expenseSub: { ...t.sm, fontFamily: fontFamily.sans, color: c.fgMuted, marginTop: 1 },
-    expenseAmount: { ...t.base, fontFamily: fontFamily.sansSemibold, color: c.fg },
+    expenseTitle: { ...ty.base, fontFamily: fontFamily.sansMedium, color: c.fg },
+    expenseSub: { ...ty.sm, fontFamily: fontFamily.sans, color: c.fgMuted, marginTop: 1 },
+    expenseAmount: { ...ty.base, fontFamily: fontFamily.sansSemibold, color: c.fg },
 
     fab: {
       position: 'absolute',
@@ -251,6 +256,6 @@ function makeStyles(c: Colors) {
       shadowOffset: { width: 0, height: 3 },
       elevation: 4,
     },
-    fabText: { ...t.base, fontFamily: fontFamily.sansSemibold, color: c.inkButtonText },
+    fabText: { ...ty.base, fontFamily: fontFamily.sansSemibold, color: c.inkButtonText },
   });
 }

@@ -16,9 +16,10 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '../navigation';
 import { useGroups } from '../store/groups';
 import { activeMembers } from '../lib/format';
-import { useTheme, fontFamily, space, radius, target, type as t, hairline, type Colors } from '../theme';
+import { useTheme, fontFamily, space, radius, target, type as ty, hairline, type Colors } from '../theme';
 import { Avatar } from '../components/ui';
 import { usePrompt } from '../components/Dialogs';
+import { t } from '../i18n';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ClaimMember'>;
 
@@ -55,9 +56,9 @@ export default function ClaimMemberScreen({ navigation, route }: Props) {
 
   const addSelf = () =>
     prompt.open({
-      title: 'Add yourself',
-      placeholder: 'Your name',
-      confirmLabel: 'Add',
+      title: t('claim.addSelfTitle'),
+      placeholder: t('claim.yourName'),
+      confirmLabel: t('common.add'),
       autoCapitalize: 'words',
       onSubmit: (name) => {
         const id = addMember(groupId, name);
@@ -69,18 +70,18 @@ export default function ClaimMemberScreen({ navigation, route }: Props) {
   return (
     <View style={[s.screen, { paddingTop: insets.top + space.s5 }]}>
       <Text style={s.title} accessibilityRole="header">
-        {change ? 'Change who you are' : 'Which one are you?'}
+        {change ? t('claim.changeTitle') : t('claim.whichTitle')}
       </Text>
       <Text style={s.subtitle}>
-        Pick yourself from the people in {group?.name ?? 'this group'} so your balance is yours. This only changes which person is you on this device — it never moves anyone’s expenses.
+        {t('claim.subtitle', { group: group?.name ?? t('group.thisGroup') })}
       </Text>
 
       {members.length === 0 ? (
         <View style={s.loading}>
           <ActivityIndicator color={c.appAccent} />
-          <Text style={s.loadingText}>Getting the group from the others…</Text>
+          <Text style={s.loadingText}>{t('claim.loading')}</Text>
           <Pressable onPress={addSelf} accessibilityRole="button" style={({ pressed }) => [s.ghostBtn, pressed && { opacity: 0.6 }]}>
-            <Text style={s.ghostText}>I’m someone new</Text>
+            <Text style={s.ghostText}>{t('claim.someoneNew')}</Text>
           </Pressable>
         </View>
       ) : (
@@ -92,24 +93,24 @@ export default function ClaimMemberScreen({ navigation, route }: Props) {
             <Pressable
               onPress={() => claim(item.id)}
               accessibilityRole="button"
-              accessibilityLabel={`I'm ${item.displayName}`}
+              accessibilityLabel={t('claim.imA11y', { name: item.displayName })}
               style={({ pressed }) => [s.row, pressed && { opacity: 0.6 }]}
             >
               <Avatar name={item.displayName} color={item.color} emoji={item.emoji} size={40} />
               <Text style={s.rowName}>{item.displayName}</Text>
-              {item.id === meId ? <Text style={s.youNow}>you now</Text> : null}
+              {item.id === meId ? <Text style={s.youNow}>{t('claim.youNow')}</Text> : null}
             </Pressable>
           )}
           ListFooterComponent={
             <Pressable onPress={addSelf} accessibilityRole="button" style={({ pressed }) => [s.newRow, pressed && { opacity: 0.6 }]}>
-              <Text style={s.newRowText}>I’m someone new</Text>
+              <Text style={s.newRowText}>{t('claim.someoneNew')}</Text>
             </Pressable>
           }
         />
       )}
 
       <Pressable onPress={done} accessibilityRole="button" style={({ pressed }) => [s.skip, pressed && { opacity: 0.6 }]}>
-        <Text style={s.skipText}>{change ? 'Cancel' : 'Skip for now'}</Text>
+        <Text style={s.skipText}>{change ? t('common.cancel') : t('claim.skip')}</Text>
       </Pressable>
       {prompt.element}
     </View>
@@ -120,9 +121,9 @@ function makeStyles(c: Colors) {
   return StyleSheet.create({
     screen: { flex: 1, backgroundColor: c.bg, paddingHorizontal: space.s6 },
     title: { fontSize: 26, lineHeight: 32, fontFamily: fontFamily.sansSemibold, color: c.fg },
-    subtitle: { ...t.base, fontFamily: fontFamily.sans, color: c.fgMuted, marginTop: space.s3 },
+    subtitle: { ...ty.base, fontFamily: fontFamily.sans, color: c.fgMuted, marginTop: space.s3 },
     loading: { alignItems: 'center', justifyContent: 'center', flex: 1, gap: space.s5 },
-    loadingText: { ...t.base, fontFamily: fontFamily.sans, color: c.fgMuted },
+    loadingText: { ...ty.base, fontFamily: fontFamily.sans, color: c.fgMuted },
     row: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -132,9 +133,9 @@ function makeStyles(c: Colors) {
       borderBottomWidth: hairline,
       borderBottomColor: c.hairline,
     },
-    rowName: { ...t.md, fontFamily: fontFamily.sansMedium, color: c.fg, flex: 1 },
+    rowName: { ...ty.md, fontFamily: fontFamily.sansMedium, color: c.fg, flex: 1 },
     youNow: {
-      ...t.xs,
+      ...ty.xs,
       fontFamily: fontFamily.sansSemibold,
       color: c.appAccent,
       backgroundColor: c.appAccentBg,
@@ -144,10 +145,10 @@ function makeStyles(c: Colors) {
       overflow: 'hidden',
     },
     newRow: { minHeight: target.min, justifyContent: 'center', paddingVertical: space.s5 },
-    newRowText: { ...t.base, fontFamily: fontFamily.sansSemibold, color: c.appAccent },
+    newRowText: { ...ty.base, fontFamily: fontFamily.sansSemibold, color: c.appAccent },
     ghostBtn: { minHeight: target.min, justifyContent: 'center', paddingHorizontal: space.s6 },
-    ghostText: { ...t.base, fontFamily: fontFamily.sansSemibold, color: c.appAccent },
+    ghostText: { ...ty.base, fontFamily: fontFamily.sansSemibold, color: c.appAccent },
     skip: { alignSelf: 'center', minHeight: target.min, justifyContent: 'center', paddingBottom: space.s4 },
-    skipText: { ...t.base, fontFamily: fontFamily.sans, color: c.fgSubtle },
+    skipText: { ...ty.base, fontFamily: fontFamily.sans, color: c.fgSubtle },
   });
 }

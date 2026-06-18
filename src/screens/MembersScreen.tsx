@@ -34,12 +34,13 @@ import {
   space,
   radius,
   target,
-  type as t,
+  type as ty,
   hairline,
   type Colors,
 } from '../theme';
 import { Avatar, EmptyState } from '../components/ui';
 import { useActionMenu, usePrompt, useConfirm } from '../components/Dialogs';
+import { t } from '../i18n';
 import type { Member, PaymentHandles } from '../data/types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Members'>;
@@ -79,15 +80,15 @@ export default function MembersScreen({ navigation, route }: Props) {
     return (
       <View style={[s.screen, { paddingTop: insets.top }]}>
         <View style={s.topbar}>
-          <Pressable onPress={() => navigation.goBack()} accessibilityRole="button" accessibilityLabel="Back" hitSlop={8} style={s.iconBtn}>
+          <Pressable onPress={() => navigation.goBack()} accessibilityRole="button" accessibilityLabel={t('common.back')} hitSlop={8} style={s.iconBtn}>
             <Text style={s.backChevron}>‹</Text>
           </Pressable>
           <Text style={s.topTitle} accessibilityRole="header">
-            Members
+            {t('members.title')}
           </Text>
           <View style={s.iconBtn} />
         </View>
-        <EmptyState title="Group not found" />
+        <EmptyState title={t('group.notFound')} />
       </View>
     );
   }
@@ -97,7 +98,7 @@ export default function MembersScreen({ navigation, route }: Props) {
   const cycleColor = (member: Member) => {
     const used = members.map((m) => m.color).filter(Boolean) as string[];
     menu.open({
-      title: 'Color',
+      title: t('members.color'),
       options: MEMBER_COLORS.map((color) => ({
         label:
           (member.color === color ? '● ' : used.includes(color) ? '◦ ' : '○ ') +
@@ -112,14 +113,14 @@ export default function MembersScreen({ navigation, route }: Props) {
   const mergeFlow = (member: Member) => {
     const others = members.filter((m) => m.id !== member.id);
     menu.open({
-      title: `${member.displayName} is really…`,
+      title: t('members.isReally', { name: member.displayName }),
       options: others.map((target) => ({
         label: target.displayName,
         onPress: () =>
           confirm.open({
-            title: `Merge ${member.displayName} into ${target.displayName}?`,
-            message: `Everything ${member.displayName} paid or owes moves to ${target.displayName}, and ${member.displayName} is removed. This can’t be undone.`,
-            confirmLabel: 'Merge',
+            title: t('members.mergeTitle', { a: member.displayName, b: target.displayName }),
+            message: t('members.mergeMessage', { a: member.displayName, b: target.displayName }),
+            confirmLabel: t('common.merge'),
             destructive: true,
             onConfirm: () => mergeMembers(groupId, target.id, member.id),
           }),
@@ -137,29 +138,29 @@ export default function MembersScreen({ navigation, route }: Props) {
         // the single "Change who I am" flow, so there's no way to casually
         // re-point yourself at an arbitrary person. See § identity.
         {
-          label: 'Rename',
+          label: t('common.rename'),
           onPress: () =>
             prompt.open({
-              title: 'Rename person',
+              title: t('members.renamePerson'),
               initialValue: member.displayName,
               selectAll: true,
-              confirmLabel: 'Save',
+              confirmLabel: t('common.save'),
               onSubmit: (text) => updateMember(groupId, member.id, { displayName: text }),
             }),
         },
-        { label: 'Payment handles', onPress: () => setEditing(member) },
-        { label: 'Color', onPress: () => cycleColor(member) },
+        { label: t('members.paymentHandles'), onPress: () => setEditing(member) },
+        { label: t('members.color'), onPress: () => cycleColor(member) },
         ...(members.length > 1
-          ? [{ label: 'Merge into another person', onPress: () => mergeFlow(member) }]
+          ? [{ label: t('members.mergeInto'), onPress: () => mergeFlow(member) }]
           : []),
         {
-          label: 'Remove',
+          label: t('common.remove'),
           destructive: true,
           onPress: () =>
             confirm.open({
-              title: `Remove ${member.displayName}?`,
-              message: 'Their past expenses stay in the group, exactly as split. You just can’t add them to new ones.',
-              confirmLabel: 'Remove',
+              title: t('members.removeTitle', { name: member.displayName }),
+              message: t('members.removeMessage'),
+              confirmLabel: t('common.remove'),
               destructive: true,
               onConfirm: () => removeMember(groupId, member.id),
             }),
@@ -171,11 +172,11 @@ export default function MembersScreen({ navigation, route }: Props) {
   return (
     <View style={[s.screen, { paddingTop: insets.top }]}>
       <View style={s.topbar}>
-        <Pressable onPress={() => navigation.goBack()} accessibilityRole="button" accessibilityLabel="Back" hitSlop={8} style={s.iconBtn}>
+        <Pressable onPress={() => navigation.goBack()} accessibilityRole="button" accessibilityLabel={t('common.back')} hitSlop={8} style={s.iconBtn}>
           <Text style={s.backChevron}>‹</Text>
         </Pressable>
         <Text style={s.topTitle} numberOfLines={1} accessibilityRole="header">
-          Members
+          {t('members.title')}
         </Text>
         <View style={s.iconBtn} />
       </View>
@@ -184,16 +185,16 @@ export default function MembersScreen({ navigation, route }: Props) {
         data={members}
         keyExtractor={(m) => m.id}
         contentContainerStyle={{ padding: space.s5, paddingBottom: insets.bottom + space.s7 }}
-        ListEmptyComponent={<EmptyState title="No one here yet" message="Add the people sharing these expenses." />}
+        ListEmptyComponent={<EmptyState title={t('members.emptyTitle')} message={t('members.emptyMessage')} />}
         ListHeaderComponent={
           <Pressable
             onPress={() => navigation.navigate('ClaimMember', { groupId, change: true })}
             accessibilityRole="button"
-            accessibilityLabel={meName ? `You are ${meName}. Change who you are` : 'Set who you are'}
+            accessibilityLabel={meName ? t('members.youAreA11y', { name: meName }) : t('members.setWhoA11y')}
             style={({ pressed }) => [s.identityRow, pressed && s.pressed]}
           >
             <View style={{ flex: 1 }}>
-              <Text style={s.identityLabel}>{meName ? 'You are' : 'Set who you are'}</Text>
+              <Text style={s.identityLabel}>{meName ? t('members.youAre') : t('members.setWho')}</Text>
               {meName ? <Text style={s.identityName}>{meName}</Text> : null}
             </View>
             <Text style={s.identityChevron}>›</Text>
@@ -206,7 +207,11 @@ export default function MembersScreen({ navigation, route }: Props) {
             <Pressable
               onPress={() => openMember(item)}
               accessibilityRole="button"
-              accessibilityLabel={`${item.displayName}${isMe ? ', you' : ''}. Options`}
+              accessibilityLabel={
+                isMe
+                  ? t('members.optionsMeA11y', { name: item.displayName })
+                  : t('members.optionsA11y', { name: item.displayName })
+              }
               style={({ pressed }) => [s.memberRow, pressed && s.pressed]}
             >
               <Avatar name={item.displayName} color={item.color} emoji={item.emoji} size={40} />
@@ -217,7 +222,7 @@ export default function MembersScreen({ navigation, route }: Props) {
                   </Text>
                   {isMe ? (
                     <View style={s.youPill}>
-                      <Text style={s.youPillText}>you</Text>
+                      <Text style={s.youPillText}>{t('members.you')}</Text>
                     </View>
                   ) : null}
                 </View>
@@ -235,21 +240,21 @@ export default function MembersScreen({ navigation, route }: Props) {
             <Pressable
               onPress={() =>
                 prompt.open({
-                  title: 'Add person',
-                  placeholder: 'Name',
-                  confirmLabel: 'Add',
+                  title: t('members.addPerson'),
+                  placeholder: t('members.name'),
+                  confirmLabel: t('common.add'),
                   onSubmit: (text) => addMember(groupId, text),
                 })
               }
               accessibilityRole="button"
-              accessibilityLabel="Add person"
+              accessibilityLabel={t('members.addPerson')}
               style={({ pressed }) => [s.addRow, pressed && s.pressed]}
             >
               <Plus size={18} color={c.appAccent} />
-              <Text style={s.addRowText}>Add person</Text>
+              <Text style={s.addRowText}>{t('members.addPerson')}</Text>
             </Pressable>
             <Text style={s.footer}>
-              A person here is just a name you pick for this group. No account, no phone number or email lookup — nothing connects them to a real identity.
+              {t('members.footer')}
             </Text>
           </View>
         }
@@ -310,13 +315,13 @@ function HandlesSheet({
       <KeyboardAvoidingView style={s.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <View style={[s.sheetScreen, { paddingTop: insets.top + space.s4 }]}>
           <View style={s.sheetHeader}>
-            <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel="Close" hitSlop={8}>
+            <Pressable onPress={onClose} accessibilityRole="button" accessibilityLabel={t('common.close')} hitSlop={8}>
               <X size={24} color={c.fgMuted} />
             </Pressable>
             <Text style={s.sheetTitle} accessibilityRole="header">
-              Payment handles
+              {t('members.paymentHandles')}
             </Text>
-            <Pressable onPress={save} accessibilityRole="button" accessibilityLabel="Save" hitSlop={8} style={({ pressed }) => pressed && s.pressed}>
+            <Pressable onPress={save} accessibilityRole="button" accessibilityLabel={t('common.save')} hitSlop={8} style={({ pressed }) => pressed && s.pressed}>
               <Check size={24} color={c.appAccent} />
             </Pressable>
           </View>
@@ -324,49 +329,49 @@ function HandlesSheet({
           <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + space.s7 }} keyboardShouldPersistTaps="handled">
             <Text style={s.sheetLead}>
               {isMe
-                ? 'Others can pay you here at settle-up. Each one is optional — fill in only what you use.'
-                : `Where ${member?.displayName ?? 'this person'} can be paid at settle-up. Optional.`}
+                ? t('members.leadMe')
+                : t('members.leadOther', { name: member?.displayName ?? t('members.thisPerson') })}
             </Text>
 
-            <Text style={s.label}>Venmo username</Text>
+            <Text style={s.label}>{t('members.venmoLabel')}</Text>
             <TextInput
               style={s.input}
               value={venmo}
               onChangeText={setVenmo}
-              placeholder="username"
+              placeholder={t('members.username')}
               placeholderTextColor={c.fgSubtle}
               autoCapitalize="none"
               autoCorrect={false}
               returnKeyType="next"
             />
-            <Text style={s.helper}>Others can pay you here at settle-up. Optional.</Text>
+            <Text style={s.helper}>{t('members.handleHelper')}</Text>
 
-            <Text style={s.label}>PayPal.me handle</Text>
+            <Text style={s.label}>{t('members.paypalLabel')}</Text>
             <TextInput
               style={s.input}
               value={paypal}
               onChangeText={setPaypal}
-              placeholder="handle"
+              placeholder={t('members.handle')}
               placeholderTextColor={c.fgSubtle}
               autoCapitalize="none"
               autoCorrect={false}
               returnKeyType="next"
             />
-            <Text style={s.helper}>The part after paypal.me/. Optional.</Text>
+            <Text style={s.helper}>{t('members.paypalHelper')}</Text>
 
-            <Text style={s.label}>Cash App $cashtag</Text>
+            <Text style={s.label}>{t('members.cashappLabel')}</Text>
             <TextInput
               style={s.input}
               value={cashapp}
               onChangeText={setCashapp}
-              placeholder="cashtag"
+              placeholder={t('members.cashtag')}
               placeholderTextColor={c.fgSubtle}
               autoCapitalize="none"
               autoCorrect={false}
               returnKeyType="done"
               onSubmitEditing={save}
             />
-            <Text style={s.helper}>Others can pay you here at settle-up. Optional.</Text>
+            <Text style={s.helper}>{t('members.handleHelper')}</Text>
           </ScrollView>
         </View>
       </KeyboardAvoidingView>
@@ -383,7 +388,7 @@ function makeStyles(c: Colors) {
     iconBtn: { width: 36, height: 36, alignItems: 'center', justifyContent: 'center' },
     backChevron: { fontSize: 30, lineHeight: 32, color: c.fg, fontFamily: fontFamily.sans },
     topbar: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: space.s4, paddingVertical: space.s3, gap: space.s2 },
-    topTitle: { ...t.md, fontFamily: fontFamily.sansSemibold, color: c.fg, flex: 1 },
+    topTitle: { ...ty.md, fontFamily: fontFamily.sansSemibold, color: c.fg, flex: 1 },
 
     identityRow: {
       flexDirection: 'row',
@@ -397,9 +402,9 @@ function makeStyles(c: Colors) {
       borderColor: c.hairline,
       backgroundColor: c.bgElevated,
     },
-    identityLabel: { ...t.sm, fontFamily: fontFamily.sans, color: c.fgMuted },
-    identityName: { ...t.base, fontFamily: fontFamily.sansSemibold, color: c.fg, marginTop: 1 },
-    identityChevron: { ...t.md, fontFamily: fontFamily.sans, color: c.fgSubtle },
+    identityLabel: { ...ty.sm, fontFamily: fontFamily.sans, color: c.fgMuted },
+    identityName: { ...ty.base, fontFamily: fontFamily.sansSemibold, color: c.fg, marginTop: 1 },
+    identityChevron: { ...ty.md, fontFamily: fontFamily.sans, color: c.fgSubtle },
     memberRow: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -410,8 +415,8 @@ function makeStyles(c: Colors) {
     },
     memberBody: { flex: 1 },
     nameRow: { flexDirection: 'row', alignItems: 'center', gap: space.s3 },
-    memberName: { ...t.base, fontFamily: fontFamily.sansMedium, color: c.fg, flexShrink: 1 },
-    memberHint: { ...t.sm, fontFamily: fontFamily.sans, color: c.fgMuted, marginTop: 1 },
+    memberName: { ...ty.base, fontFamily: fontFamily.sansMedium, color: c.fg, flexShrink: 1 },
+    memberHint: { ...ty.sm, fontFamily: fontFamily.sans, color: c.fgMuted, marginTop: 1 },
     youPill: {
       paddingHorizontal: space.s3,
       height: 22,
@@ -420,20 +425,20 @@ function makeStyles(c: Colors) {
       alignItems: 'center',
       justifyContent: 'center',
     },
-    youPillText: { ...t.xs, fontFamily: fontFamily.sansSemibold, color: c.appAccent },
+    youPillText: { ...ty.xs, fontFamily: fontFamily.sansSemibold, color: c.appAccent },
 
     addRow: { flexDirection: 'row', alignItems: 'center', gap: space.s3, paddingVertical: space.s5 },
-    addRowText: { ...t.base, fontFamily: fontFamily.sansMedium, color: c.appAccent },
-    footer: { ...t.sm, fontFamily: fontFamily.sans, color: c.fgSubtle, marginTop: space.s4, lineHeight: 20 },
+    addRowText: { ...ty.base, fontFamily: fontFamily.sansMedium, color: c.appAccent },
+    footer: { ...ty.sm, fontFamily: fontFamily.sans, color: c.fgSubtle, marginTop: space.s4, lineHeight: 20 },
 
     // Handles sheet
     sheetScreen: { flex: 1, backgroundColor: c.bg, paddingHorizontal: space.s5 },
     sheetHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: space.s5 },
-    sheetTitle: { ...t.md, fontFamily: fontFamily.sansSemibold, color: c.fg },
-    sheetLead: { ...t.base, fontFamily: fontFamily.sans, color: c.fgMuted, lineHeight: 22, marginBottom: space.s4 },
-    label: { ...t.sm, fontFamily: fontFamily.sansSemibold, color: c.fgMuted, marginTop: space.s5, marginBottom: space.s3 },
+    sheetTitle: { ...ty.md, fontFamily: fontFamily.sansSemibold, color: c.fg },
+    sheetLead: { ...ty.base, fontFamily: fontFamily.sans, color: c.fgMuted, lineHeight: 22, marginBottom: space.s4 },
+    label: { ...ty.sm, fontFamily: fontFamily.sansSemibold, color: c.fgMuted, marginTop: space.s5, marginBottom: space.s3 },
     input: {
-      ...t.base,
+      ...ty.base,
       fontFamily: fontFamily.sans,
       color: c.fg,
       borderWidth: hairline,
@@ -443,6 +448,6 @@ function makeStyles(c: Colors) {
       minHeight: target.min,
       justifyContent: 'center',
     },
-    helper: { ...t.sm, fontFamily: fontFamily.sans, color: c.fgSubtle, marginTop: space.s3 },
+    helper: { ...ty.sm, fontFamily: fontFamily.sans, color: c.fgSubtle, marginTop: space.s3 },
   });
 }
