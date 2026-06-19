@@ -34,6 +34,7 @@
     "scheme": "splitexpenses",
     "plugins": [
       "./plugins/withGradleJvmArgs",
+      "expo-iap",
       "expo-sqlite",
       "expo-font",
       "expo-sharing",
