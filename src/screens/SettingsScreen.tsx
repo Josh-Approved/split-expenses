@@ -33,7 +33,7 @@ import { getSetting, setSetting } from '../store/db';
 import { exportAllGroups, importGroupsFromFile } from '../lib/transfer';
 import { enableReminders, disableReminders } from '../lib/reminders';
 import {
-  BMAC_URL,
+  TIP_JAR_ENABLED,
   STUDIO_URL,
   REPO_URL,
   PRIVACY_URL,
@@ -44,6 +44,8 @@ import {
 } from '../lib/links';
 import { useTheme, fontFamily, space, radius, target, type as ty, hairline, type Colors, AppearanceToggle } from '../theme';
 import { LanguageSetting } from '../components/LanguageSetting';
+import TipJarSheet from '../components/TipJarSheet';
+import { TIP_PRODUCT_IDS } from '../constants/tipProducts';
 import { t } from '../i18n';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Settings'>;
@@ -58,6 +60,7 @@ export default function SettingsScreen({ navigation }: Props) {
   const [reminders, setReminders] = useState(false);
   const [reminderNote, setReminderNote] = useState<string | null>(null);
   const [dataNote, setDataNote] = useState<string | null>(null);
+  const [tipVisible, setTipVisible] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -177,7 +180,7 @@ export default function SettingsScreen({ navigation }: Props) {
         {/* ---- About (canonical) ------------------------------------- */}
         <Text style={s.sectionLabel}>{t('settings.about')}</Text>
         <View style={s.card}>
-          <AboutRow c={c} s={s} icon={HandHeart} label={t('about.support')} onPress={() => openUrl(BMAC_URL)} first />
+          {TIP_JAR_ENABLED && <AboutRow c={c} s={s} icon={HandHeart} label={t('about.support')} onPress={() => setTipVisible(true)} first />}
           <AboutRow c={c} s={s} icon={Mail} label={t('about.feedback')} onPress={openFeedbackMail} />
           <AboutRow c={c} s={s} icon={Star} label={t('about.review')} onPress={openReview} />
           <AboutRow c={c} s={s} icon={Shield} label={t('settings.privacyPolicy')} onPress={() => openUrl(PRIVACY_URL)} />
@@ -206,6 +209,14 @@ export default function SettingsScreen({ navigation }: Props) {
           </Text>
         </Pressable>
       </ScrollView>
+
+      {tipVisible && (
+        <TipJarSheet
+          visible
+          onDismiss={() => setTipVisible(false)}
+          productIds={TIP_PRODUCT_IDS}
+        />
+      )}
     </View>
   );
 }
