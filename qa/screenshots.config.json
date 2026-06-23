@@ -2,22 +2,69 @@
   "_comment": "Slot pattern (canonical-store-listings.md § Screenshot principles): slot 1 = core value prop + free, slot 2 = Josh Approved card, slots 3..N = features. Sources map to qa/captures/<store>/<name>.png produced by the journey (names: detail, editor, list). Share/settle-up shots are a follow-up once the seed run is proven (mirrors grocery deferring 'share').",
   "stores": {
     "ios": [
-      { "id": "core",          "source": "ios/detail.png", "caption": "Free expense splitter. See who owes whom." },
-      { "id": "josh-approved", "kind": "card" },
-      { "id": "editor",        "source": "ios/editor.png", "caption": "Add an expense in seconds. Split it any way." },
-      { "id": "list",          "source": "ios/list.png",   "caption": "A group for every trip, house, or couple." }
+      {
+        "id": "core",
+        "source": "ios/detail.png",
+        "caption": "Free expense splitter. See who owes whom."
+      },
+      {
+        "id": "josh-approved",
+        "kind": "card"
+      },
+      {
+        "id": "editor",
+        "source": "ios/editor.png",
+        "caption": "Add an expense in seconds. Split it any way."
+      },
+      {
+        "id": "list",
+        "source": "ios/list.png",
+        "caption": "A group for every trip, house, or couple."
+      }
     ],
     "android": [
-      { "id": "core",          "source": "android/detail.png", "caption": "Free expense splitter. See who owes whom." },
-      { "id": "josh-approved", "kind": "card" },
-      { "id": "editor",        "source": "android/editor.png", "caption": "Add an expense in seconds. Split it any way." },
-      { "id": "list",          "source": "android/list.png",   "caption": "A group for every trip, house, or couple." }
+      {
+        "id": "core",
+        "source": "android/detail.png",
+        "caption": "Free expense splitter. See who owes whom."
+      },
+      {
+        "id": "josh-approved",
+        "kind": "card"
+      },
+      {
+        "id": "editor",
+        "source": "android/editor.png",
+        "caption": "Add an expense in seconds. Split it any way."
+      },
+      {
+        "id": "list",
+        "source": "android/list.png",
+        "caption": "A group for every trip, house, or couple."
+      }
     ],
     "ipad": [
-      { "id": "core",          "source": "ipad/detail.png", "caption": "Free expense splitter. See who owes whom." },
-      { "id": "josh-approved", "kind": "card" },
-      { "id": "editor",        "source": "ipad/editor.png", "caption": "Add an expense in seconds. Split it any way." },
-      { "id": "list",          "source": "ipad/list.png",   "caption": "A group for every trip, house, or couple." }
+      {
+        "id": "core",
+        "source": "ipad/detail.png",
+        "caption": "Free expense splitter. See who owes whom."
+      },
+      {
+        "id": "josh-approved",
+        "kind": "card"
+      },
+      {
+        "id": "editor",
+        "source": "ipad/editor.png",
+        "caption": "Add an expense in seconds. Split it any way."
+      },
+      {
+        "id": "list",
+        "source": "ipad/list.png",
+        "caption": "A group for every trip, house, or couple."
+      }
     ]
-  }
+  },
+  "style": "signature",
+  "motif": "lines"
 }
