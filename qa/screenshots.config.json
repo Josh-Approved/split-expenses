@@ -5,7 +5,7 @@
       {
         "id": "core",
         "source": "ios/detail.png",
-        "caption": "Free expense splitter. See who owes whom."
+        "caption": "An expense splitter. See who owes whom."
       },
       {
         "id": "josh-approved",
@@ -26,7 +26,7 @@
       {
         "id": "core",
         "source": "android/detail.png",
-        "caption": "Free expense splitter. See who owes whom."
+        "caption": "An expense splitter. See who owes whom."
       },
       {
         "id": "josh-approved",
@@ -47,7 +47,7 @@
       {
         "id": "core",
         "source": "ipad/detail.png",
-        "caption": "Free expense splitter. See who owes whom."
+        "caption": "An expense splitter. See who owes whom."
       },
       {
         "id": "josh-approved",
