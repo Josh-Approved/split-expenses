@@ -50,6 +50,12 @@ export const APP_STRINGS = {
     wayOne: 'way',
     wayOther: 'ways',
     thisGroup: 'this group',
+    sync: {
+      connected: 'Connected',
+      offline: 'Offline',
+      syncing: 'Syncing…',
+      a11y: 'Shared group sync: {status}. Tap to sync now.',
+    },
   },
   claim: {
     addSelfTitle: 'Add yourself',

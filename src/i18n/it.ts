@@ -47,6 +47,7 @@ const it = {
     wayOne: 'parte',
     wayOther: 'parti',
     thisGroup: 'questo gruppo',
+    sync: { connected: 'Connesso', offline: 'Offline', syncing: 'Sincronizzazione…', a11y: 'Sincronizzazione gruppo condiviso: {status}. Tocca per sincronizzare ora.' },
   },
   claim: {
     addSelfTitle: 'Aggiungiti',
