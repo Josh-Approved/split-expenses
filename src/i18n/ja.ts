@@ -47,6 +47,7 @@ const ja = {
     wayOne: '人',
     wayOther: '人',
     thisGroup: 'このグループ',
+    sync: { connected: '接続済み', offline: 'オフライン', syncing: '同期中…', a11y: '共有グループの同期：{status}。タップして今すぐ同期。' },
   },
   claim: {
     addSelfTitle: '自分を追加',

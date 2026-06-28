@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Linking from 'expo-linking';
-import { useColorScheme } from 'react-native';
+import { useColorScheme, AppState } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import {
   NavigationContainer,
@@ -16,7 +16,7 @@ import type { RootStackParamList } from './src/navigation';
 import { useAppFonts, lightColors, darkColors, useApplyThemePreference } from './src/theme';
 import { useApplyLocalePreference, useLocaleVersion } from './src/i18n/localePreference';
 import { useGroups } from './src/store/groups';
-import { startSyncEngine } from './src/sync/engine';
+import { startSyncEngine, flushSyncEngine } from './src/sync/engine';
 import { prefetchRates } from './src/data/fx';
 import { ensureNotificationHandler } from './src/lib/reminders';
 import { parseShareLink } from './src/sync/share';
@@ -64,6 +64,21 @@ export default function App() {
   // Start live sync once the store is populated.
   useEffect(() => {
     if (hydrated) startSyncEngine();
+  }, [hydrated]);
+
+  // On the way to the background, durably flush local state and push the latest
+  // copy to peers immediately — a change made just before switching apps can
+  // otherwise be lost (fire-and-forget save not yet landed) or never published
+  // (the 700ms publish debounce is suspended mid-wait).
+  useEffect(() => {
+    if (!hydrated) return;
+    const sub = AppState.addEventListener('change', (next) => {
+      if (next === 'inactive' || next === 'background') {
+        flushSyncEngine();
+        void useGroups.getState().flushPending();
+      }
+    });
+    return () => sub.remove();
   }, [hydrated]);
 
   // Handle a tapped/scanned share link: join the group, jump to it.

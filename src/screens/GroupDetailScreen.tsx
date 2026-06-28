@@ -23,6 +23,7 @@ import { useTheme, fontFamily, space, radius, type as ty, hairline, type Colors 
 import { Avatar, EmptyState } from '../components/ui';
 import { useActionMenu, usePrompt, useConfirm } from '../components/Dialogs';
 import { CurrencyPicker } from '../components/CurrencyPicker';
+import { SyncStatusBar } from '../components/SyncStatusBar';
 import { t } from '../i18n';
 import type { Expense, Group } from '../data/types';
 
@@ -118,6 +119,8 @@ export default function GroupDetailScreen({ navigation, route }: Props) {
           </Pressable>
         </View>
       </View>
+
+      {group.shareIdentity && <SyncStatusBar secret={group.shareIdentity.secret} />}
 
       {/* Balance header */}
       <Pressable

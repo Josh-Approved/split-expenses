@@ -25,17 +25,37 @@ import { newId } from '../lib/id';
 import { nextColor } from '../data/avatars';
 import { makeShareIdentity } from '../sync/share';
 import { mergeGroup } from '../sync/mergeGroup';
+import { now as clockNow, initClock, observe as observeClock, peek as clockPeek } from '../sync/clock';
 import {
   loadAllGroups,
   saveGroup,
   deleteGroupRow,
   loadDeviceState,
   setDeviceMe,
+  getSetting,
+  setSetting,
 } from './db';
 import { QA_MODE } from '../qa/qaMode';
 import { qaSeed } from '../qa/fixtures';
 
-const now = () => Date.now();
+// Skew-resistant logical clock (see sync/clock.ts). Every merge-participating
+// stamp flows through here, so comparing two devices' timestamps is safe even
+// when their wall clocks differ.
+const now = () => clockNow();
+
+const CLOCK_KEY = 'syncClock';
+const persistClock = (v: number) => {
+  void setSetting(CLOCK_KEY, String(v));
+};
+
+/** Largest merge timestamp anywhere in a group (for lifting the clock on load). */
+function groupMaxTs(g: Group): number {
+  let m = Math.max(g.updatedAt, g.createdAt);
+  for (const rec of [...g.members, ...g.expenses, ...g.settlements]) {
+    m = Math.max(m, rec.updatedAt, rec.deletedAt ?? 0);
+  }
+  return m;
+}
 
 export interface NewExpense {
   description: string;
@@ -104,6 +124,12 @@ interface GroupsState {
   /** Canon Layer 3 import — brings in groups with FRESH ids (a copy, never a
    *  silent overwrite). Returns the count imported. */
   importGroups: (incoming: Group[]) => number;
+
+  /** Durably write all current groups + the clock high-water mark, AWAITED.
+   *  Per-group saves are otherwise fire-and-forget, so an edit made right before
+   *  the app is backgrounded can be lost if iOS suspends/kills it first. The
+   *  App-level AppState handler awaits this on background. */
+  flushPending: () => Promise<void>;
 }
 
 export const useGroups = create<GroupsState>((set, get) => {
@@ -165,7 +191,16 @@ export const useGroups = create<GroupsState>((set, get) => {
         set({ groups: seed.groups, me: seed.me, hydrated: true });
         return;
       }
-      const [groups, me] = await Promise.all([loadAllGroups(), loadDeviceState()]);
+      const [groups, me, persistedClock] = await Promise.all([
+        loadAllGroups(),
+        loadDeviceState(),
+        getSetting(CLOCK_KEY),
+      ]);
+      // Lift the clock above the persisted high-water mark AND anything on disk,
+      // so a post-update / post-restore install never stamps below its own data.
+      let maxTs = persistedClock ? Number(persistedClock) || 0 : 0;
+      for (const g of groups) maxTs = Math.max(maxTs, groupMaxTs(g));
+      initClock(maxTs, persistClock);
       set({ groups, me: Object.fromEntries(me), hydrated: true });
     },
 
@@ -383,6 +418,9 @@ export const useGroups = create<GroupsState>((set, get) => {
         (g) => g.shareIdentity?.secret && g.shareIdentity.secret === remote.shareIdentity?.secret,
       );
       if (!local) return;
+      // Advance our clock past every timestamp in the incoming copy so the next
+      // local edit out-clocks the peer — "last action wins", not "fastest clock".
+      observeClock(groupMaxTs(remote));
       const merged = mergeGroup(local, remote);
       set((s) => ({ groups: s.groups.map((g) => (g.id === local.id ? merged : g)) }));
       persist(merged);
@@ -401,6 +439,16 @@ export const useGroups = create<GroupsState>((set, get) => {
       set((s) => ({ groups: [...fresh, ...s.groups] }));
       fresh.forEach(persist);
       return fresh.length;
+    },
+
+    flushPending: async () => {
+      const groups = get().groups;
+      await Promise.all(groups.map((g) => saveGroup(g).catch(() => {})));
+      try {
+        await setSetting(CLOCK_KEY, String(clockPeek()));
+      } catch {
+        /* best-effort */
+      }
     },
   };
 });
