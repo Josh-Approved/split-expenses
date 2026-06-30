@@ -8,19 +8,20 @@ import React, { useMemo, useState } from 'react';
 import { View, Text, FlatList, Pressable, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Plus, Settings as SettingsIcon, MoreHorizontal, HandHeart, Mail } from 'lucide-react-native';
+import { Plus, Settings as SettingsIcon, MoreHorizontal } from 'lucide-react-native';
 
 import type { RootStackParamList } from '../navigation';
 import { useGroups } from '../store/groups';
 import { computeBalances } from '../math/balances';
 import { phraseSelfNet, phraseGroupSubtitle, activeMembers } from '../lib/format';
-import { useTheme, fontFamily, space, radius, target, type as ty, hairline, type Colors } from '../theme';
+import { useTheme, fontFamily, space, radius, type as ty, type Colors } from '../theme';
 import { Avatar, Card, EmptyState, Divider } from '../components/ui';
 import { useActionMenu, usePrompt, useConfirm } from '../components/Dialogs';
 import { CreateGroupSheet } from '../components/CreateGroupSheet';
+import { FundingFooter } from '../components/FundingFooter';
 import TipJarSheet from '../components/TipJarSheet';
 import { TIP_PRODUCT_IDS } from '../constants/tipProducts';
-import { TIP_JAR_ENABLED, openFeedbackMail } from '../lib/links';
+import { TIP_JAR_ENABLED } from '../lib/links';
 import { t } from '../i18n';
 import type { Group } from '../data/types';
 
@@ -109,28 +110,9 @@ export default function GroupsHomeScreen({ navigation }: Props) {
         }
         ListFooterComponent={
           sorted.length > 0 ? (
-            <View style={s.footer}>
-              {TIP_JAR_ENABLED && (
-                <Pressable
-                  style={({ pressed }) => [s.footerLink, pressed && s.pressed]}
-                  onPress={() => setTipVisible(true)}
-                  accessibilityRole="button"
-                  accessibilityLabel={t('about.support')}
-                >
-                  <HandHeart size={14} color={c.fgMuted} strokeWidth={1.5} />
-                  <Text style={s.footerText}>{t('about.support')}</Text>
-                </Pressable>
-              )}
-              <Pressable
-                style={({ pressed }) => [s.footerLink, pressed && s.pressed]}
-                onPress={openFeedbackMail}
-                accessibilityRole="button"
-                accessibilityLabel={t('about.feedback')}
-              >
-                <Mail size={14} color={c.fgMuted} strokeWidth={1.5} />
-                <Text style={s.footerText}>{t('about.feedback')}</Text>
-              </Pressable>
-            </View>
+            <FundingFooter
+              onSupport={TIP_JAR_ENABLED ? () => setTipVisible(true) : undefined}
+            />
           ) : null
         }
         renderItem={({ item }) => {
@@ -233,10 +215,6 @@ function makeStyles(c: Colors) {
     groupBody: { flex: 1 },
     groupName: { ...ty.base, fontFamily: fontFamily.sansSemibold, color: c.fg },
     groupLine: { ...ty.sm, fontFamily: fontFamily.sans, color: c.fgMuted, marginTop: 2 },
-
-    footer: { flexDirection: 'row', justifyContent: 'center', gap: space.s7, paddingVertical: space.s5 },
-    footerLink: { flexDirection: 'row', alignItems: 'center', gap: space.s2, minHeight: target.min },
-    footerText: { ...ty.sm, fontFamily: fontFamily.sans, color: c.fgMuted },
 
     fab: {
       position: 'absolute',
