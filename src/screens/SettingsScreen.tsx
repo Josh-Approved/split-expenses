@@ -39,9 +39,9 @@ import {
   PRIVACY_URL,
   versionLabel,
   openUrl,
-  openFeedbackMail,
   openReview,
 } from '../lib/links';
+import { useFeedback } from '../feedback/FeedbackProvider';
 import { useTheme, fontFamily, space, radius, target, type as ty, hairline, type Colors, AppearanceToggle } from '../theme';
 import { LanguageSetting } from '../components/LanguageSetting';
 import TipJarSheet from '../components/TipJarSheet';
@@ -56,6 +56,7 @@ export default function SettingsScreen({ navigation }: Props) {
   const { c } = useTheme();
   const s = makeStyles(c);
   const insets = useSafeAreaInsets();
+  const { open: openFeedback } = useFeedback();
 
   const [reminders, setReminders] = useState(false);
   const [reminderNote, setReminderNote] = useState<string | null>(null);
@@ -181,7 +182,7 @@ export default function SettingsScreen({ navigation }: Props) {
         <Text style={s.sectionLabel}>{t('settings.about')}</Text>
         <View style={s.card}>
           {TIP_JAR_ENABLED && <AboutRow c={c} s={s} icon={HandHeart} label={t('about.support')} onPress={() => setTipVisible(true)} first />}
-          <AboutRow c={c} s={s} icon={Mail} label={t('about.feedback')} onPress={openFeedbackMail} />
+          <AboutRow c={c} s={s} icon={Mail} label={t('about.feedback')} onPress={() => openFeedback()} />
           <AboutRow c={c} s={s} icon={Star} label={t('about.review')} onPress={openReview} />
           <AboutRow c={c} s={s} icon={Shield} label={t('settings.privacyPolicy')} onPress={() => openUrl(PRIVACY_URL)} />
           <AboutRow c={c} s={s} icon={Code2} label={t('about.source')} onPress={() => openUrl(REPO_URL)} />
