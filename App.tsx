@@ -1,26 +1,26 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { StatusBar } from 'expo-status-bar';
+/**
+ * App root for Split Expenses. The shell (<AppShell/>) owns the chrome — gesture
+ * root, safe area, error boundary, the themed NavigationContainer + status bar,
+ * and the cold-start splash. App.tsx owns only the readiness gate, the screen
+ * list, and this app's startup effects (hydrate, FX prefetch, live sync, the
+ * background-durability flush, and share-link pairing).
+ */
+
+import React, { useEffect, useRef } from 'react';
 import * as SplashScreen from 'expo-splash-screen';
 import * as Linking from 'expo-linking';
-import { useColorScheme, AppState } from 'react-native';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
-import {
-  NavigationContainer,
-  DefaultTheme,
-  DarkTheme,
-  createNavigationContainerRef,
-} from '@react-navigation/native';
+import { AppState } from 'react-native';
+import { createNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 import type { RootStackParamList } from './src/navigation';
-import { useAppFonts, lightColors, darkColors, useApplyThemePreference } from './src/theme';
-import { useApplyLocalePreference, useLocaleVersion } from './src/i18n/localePreference';
+import { useAppFonts } from './src/theme';
+import { AppShell } from './src/shell/AppShell';
 import { useGroups } from './src/store/groups';
 import { startSyncEngine, flushSyncEngine } from './src/sync/engine';
 import { prefetchRates } from './src/data/fx';
 import { ensureNotificationHandler } from './src/lib/reminders';
 import { parseShareLink } from './src/sync/share';
-import AnimatedSplash from './src/components/AnimatedSplash';
 
 import GroupsHomeScreen from './src/screens/GroupsHomeScreen';
 import GroupDetailScreen from './src/screens/GroupDetailScreen';
@@ -33,27 +33,19 @@ import SettingsScreen from './src/screens/SettingsScreen';
 import Credits from './src/components/Credits';
 import { QA_MODE } from './src/qa/qaMode';
 
-// Under QA_MODE the capture harness wants a deterministic first frame: skip the
-// native splash hold and the animated splash so screenshots aren't of a splash.
+// Hold the native launch screen until the JS splash takes over (no icon blink).
+// Must run at module scope, before first paint. Skipped under QA_MODE so the
+// capture harness sees deterministic frames; AppShell owns hiding it.
 if (!QA_MODE) SplashScreen.preventAutoHideAsync().catch(() => {});
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 export const navRef = createNavigationContainerRef<RootStackParamList>();
 
 export default function App() {
-  // Restore + apply the saved appearance preference (System/Light/Dark) before
-  // first paint; drives useColorScheme() here and in every screen.
-  useApplyThemePreference();
-  // Restore + apply the saved language before first paint; the version below keys
-  // the navigator so a switch re-renders the whole app (canon § Translations).
-  useApplyLocalePreference();
-  const localeVersion = useLocaleVersion();
-  const scheme = useColorScheme();
   const [fontsLoaded] = useAppFonts();
   const hydrate = useGroups((s) => s.hydrate);
   const hydrated = useGroups((s) => s.hydrated);
   const joinShared = useGroups((s) => s.joinShared);
-  const [splashDone, setSplashDone] = useState(false);
 
   useEffect(() => {
     void hydrate();
@@ -104,34 +96,22 @@ export default function App() {
   }, [hydrated, joinShared]);
 
   const ready = fontsLoaded && hydrated;
-  const navTheme = scheme === 'dark' ? DarkTheme : DefaultTheme;
-  const c = scheme === 'dark' ? darkColors : lightColors;
-  const themed = {
-    ...navTheme,
-    colors: { ...navTheme.colors, background: c.bg, card: c.bg, text: c.fg, border: c.hairline, primary: c.appAccent },
-  };
 
   return (
-    <SafeAreaProvider>
-      {ready && (
-        <NavigationContainer key={localeVersion} ref={navRef} theme={themed}>
-          <Stack.Navigator screenOptions={{ headerShown: false, contentStyle: { backgroundColor: c.bg }, animation: QA_MODE ? 'none' : undefined }}>
-            <Stack.Screen name="GroupsHome" component={GroupsHomeScreen} />
-            <Stack.Screen name="GroupDetail" component={GroupDetailScreen} />
-            <Stack.Screen name="ClaimMember" component={ClaimMemberScreen} />
-            <Stack.Screen name="AddEditExpense" component={AddEditExpenseScreen} options={{ presentation: 'modal' }} />
-            <Stack.Screen name="Members" component={MembersScreen} />
-            <Stack.Screen name="SettleUp" component={SettleUpScreen} />
-            <Stack.Screen name="Share" component={ShareScreen} options={{ presentation: 'modal' }} />
-            <Stack.Screen name="Settings" component={SettingsScreen} />
-            <Stack.Screen name="Acknowledgements">
-              {({ navigation }) => <Credits onBack={() => navigation.goBack()} />}
-            </Stack.Screen>
-          </Stack.Navigator>
-        </NavigationContainer>
-      )}
-      {!QA_MODE && !splashDone && <AnimatedSplash ready={ready} onFinish={() => setSplashDone(true)} />}
-      <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
-    </SafeAreaProvider>
+    <AppShell ready={ready} navigationRef={navRef}>
+      <Stack.Navigator screenOptions={{ headerShown: false, animation: QA_MODE ? 'none' : undefined }}>
+        <Stack.Screen name="GroupsHome" component={GroupsHomeScreen} />
+        <Stack.Screen name="GroupDetail" component={GroupDetailScreen} />
+        <Stack.Screen name="ClaimMember" component={ClaimMemberScreen} />
+        <Stack.Screen name="AddEditExpense" component={AddEditExpenseScreen} options={{ presentation: 'modal' }} />
+        <Stack.Screen name="Members" component={MembersScreen} />
+        <Stack.Screen name="SettleUp" component={SettleUpScreen} />
+        <Stack.Screen name="Share" component={ShareScreen} options={{ presentation: 'modal' }} />
+        <Stack.Screen name="Settings" component={SettingsScreen} />
+        <Stack.Screen name="Acknowledgements">
+          {({ navigation }) => <Credits onBack={() => navigation.goBack()} />}
+        </Stack.Screen>
+      </Stack.Navigator>
+    </AppShell>
   );
 }
