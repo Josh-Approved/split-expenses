@@ -17,7 +17,7 @@ import type { RootStackParamList } from './src/navigation';
 import { useAppFonts } from './src/theme';
 import { AppShell } from './src/shell/AppShell';
 import { useGroups } from './src/store/groups';
-import { startSyncEngine, flushSyncEngine } from './src/sync/engine';
+import { startSyncEngine, flushSyncEngine, stopSyncEngine } from './src/sync/engine';
 import { prefetchRates } from './src/data/fx';
 import { ensureNotificationHandler } from './src/lib/reminders';
 import { parseShareLink } from './src/sync/share';
@@ -56,6 +56,7 @@ export default function App() {
   // Start live sync once the store is populated.
   useEffect(() => {
     if (hydrated) startSyncEngine();
+    return () => stopSyncEngine();
   }, [hydrated]);
 
   // On the way to the background, durably flush local state and push the latest
