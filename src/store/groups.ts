@@ -21,7 +21,7 @@ import type {
   Payer,
   SplitPart,
 } from '../data/types';
-import { newId } from '../lib/id';
+import { makeId } from '../lib/id';
 import { nextColor } from '../data/avatars';
 import { makeShareIdentity } from '../sync/share';
 import { mergeGroup } from '../sync/mergeGroup';
@@ -215,9 +215,9 @@ export const useGroups = create<GroupsState>((set, get) => {
         .map((displayName) => {
           const color = nextColor(usedColors);
           usedColors.push(color);
-          return { id: newId(), displayName, color, createdAt: ts, updatedAt: ts };
+          return { id: makeId('m'), displayName, color, createdAt: ts, updatedAt: ts };
         });
-      const id = newId();
+      const id = makeId('g');
       const group: Group = {
         id,
         name: name.trim() || 'Group',
@@ -256,12 +256,12 @@ export const useGroups = create<GroupsState>((set, get) => {
       const members = src.members
         .filter((m) => m.deletedAt == null)
         .map((m) => {
-          const nid = newId();
+          const nid = makeId('m');
           idMap.set(m.id, nid);
           return { ...m, id: nid, createdAt: ts, updatedAt: ts, deletedAt: undefined };
         });
       const copy: Group = {
-        id: newId(),
+        id: makeId('g'),
         name: `${src.name} (copy)`,
         baseCurrency: src.baseCurrency,
         members,
@@ -281,7 +281,7 @@ export const useGroups = create<GroupsState>((set, get) => {
       const used = (g?.members ?? []).map((m) => m.color).filter(Boolean) as string[];
       const ts = now();
       const member: Member = {
-        id: newId(),
+        id: makeId('m'),
         displayName: displayName.trim() || 'Member',
         color: nextColor(used),
         createdAt: ts,
@@ -361,7 +361,7 @@ export const useGroups = create<GroupsState>((set, get) => {
 
     addExpense: (groupId, e) => {
       const ts = now();
-      const expense: Expense = { id: newId(), createdAt: ts, updatedAt: ts, ...e };
+      const expense: Expense = { id: makeId('e'), createdAt: ts, updatedAt: ts, ...e };
       upsertRecord(groupId, 'expenses', expense);
       return expense.id;
     },
@@ -377,7 +377,7 @@ export const useGroups = create<GroupsState>((set, get) => {
 
     addSettlement: (groupId, s) => {
       const ts = now();
-      const settlement: Settlement = { id: newId(), createdAt: ts, updatedAt: ts, ...s };
+      const settlement: Settlement = { id: makeId('s'), createdAt: ts, updatedAt: ts, ...s };
       upsertRecord(groupId, 'settlements', settlement);
       return settlement.id;
     },
@@ -398,7 +398,7 @@ export const useGroups = create<GroupsState>((set, get) => {
       if (existing) return existing.id;
       const ts = now();
       const group: Group = {
-        id: newId(),
+        id: makeId('g'),
         name: 'Shared group',
         baseCurrency: 'USD',
         members: [],
@@ -430,7 +430,7 @@ export const useGroups = create<GroupsState>((set, get) => {
       const ts = now();
       const fresh = incoming.map((g) => ({
         ...g,
-        id: newId(),
+        id: makeId('g'),
         name: g.name,
         shareIdentity: null, // an imported copy is local until re-shared
         createdAt: ts,
