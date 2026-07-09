@@ -49,7 +49,9 @@
     "jest-expo": "^56.0.4",
     "pixelmatch": "^7.2.0",
     "pngjs": "^7.0.0",
-    "typescript": "~6.0.3"
+    "typescript": "~6.0.3",
+    "@testing-library/react-native": "^14.0.1",
+    "test-renderer": "^1.2.0"
   },
   "scripts": {
     "start": "expo start",
@@ -62,6 +64,16 @@
     "preset": "jest-expo",
     "transformIgnorePatterns": [
       "node_modules/(?!((jest-)?react-native|@react-native(-community)?|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@unimodules/.*|unimodules|sentry-expo|native-base|react-native-svg))"
+    ],
+    "reporters": [
+      "default",
+      "<rootDir>/qa/defect-reporter.cjs"
+    ],
+    "setupFilesAfterEnv": [
+      "<rootDir>/qa/quarantine.setup.cjs"
+    ],
+    "modulePathIgnorePatterns": [
+      "<rootDir>/qa/known-bad/"
     ]
   },
   "private": true,

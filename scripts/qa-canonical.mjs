@@ -17,6 +17,9 @@
  *   - <app>/qa/rules.mjs       — default-exported array of rule fns appended to canonical set
  *   - <app>/qa/baseline.json   — per-rule grandfathering, e.g.
  *       { "commits/fingerprint": "<sha>" }  — only commits AFTER this SHA are checked
+ *       { "testing/enforce": true }         — promote a WARN tier to FAIL
+ *       { "<rule-id>/skip": true }          — disable a rule for a deliberate design, or
+ *       { "<rule-id>/skip": ["Foo.tsx"] }   — exempt specific files (path fragments)
  */
 
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
@@ -278,10 +281,18 @@ const rulePackageJsonNoAnalytics = () => {
 // return` guards) because nothing mechanical caught the pattern.
 
 const SRC_EXTENSIONS = /\.(jsx?|tsx?)$/i;
+// A test/spec file or anything under a __tests__ dir. Test files are not
+// shippable UI: they legitimately carry literal strings ("Settings"), fixed
+// sizes, no empty states, etc., so every CONTENT rule (i18n, ux, parity, size)
+// must skip them or it false-positives on the RNTL exemplar (found 2026-07-08,
+// T3 backfill). Defined here so srcSourceFiles can exclude by default.
+const TEST_FILE_RE = /(?:\.(?:test|spec)\.[jt]sx?$)|(?:[\\/]__tests__[\\/])/;
 
 // Walk <app>/src for source files. Plain fs walk (not git) so it works on a
 // fresh checkout / pre-commit; src/ is always tracked in our apps anyway.
-const srcSourceFiles = () => {
+// Excludes test files by default (they aren't shippable source); pass
+// { includeTests: true } for the rule that counts them (trust-core-covered).
+const srcSourceFiles = ({ includeTests = false } = {}) => {
   const root = join(appDir, 'src');
   if (!exists(root)) return [];
   const out = [];
@@ -299,7 +310,7 @@ const srcSourceFiles = () => {
     }
   };
   walk(root);
-  return out;
+  return includeTests ? out : out.filter((f) => !TEST_FILE_RE.test(f));
 };
 
 // Strip line + block comments so a banned name mentioned in a doc comment
@@ -524,6 +535,19 @@ const ruleAppNameSpotlightSafe = () => {
 const KB_PERSIST_RE = /blurOnSubmit\s*=\s*\{\s*false\s*\}|submitBehavior\s*=\s*\{?\s*['"]submit['"]/;
 const KB_ESCAPE_RE = /Keyboard\s*\.\s*dismiss\s*\(|\.\s*blur\s*\(|onClose\s*\(|\.\s*goBack\s*\(/;
 
+// Pure core (self-tested): a file is a keyboard trap when it persists the
+// keyboard on submit but never gives an escape (dismiss/blur/close/goBack).
+const keyboardTrapped = (code) => KB_PERSIST_RE.test(code) && !KB_ESCAPE_RE.test(code);
+
+// PROMOTED WARN→FAIL fleet-wide (Uplevel-3 T3, 2026-07-08). The 2026-06-13
+// grocery-list add-item trap is a real, on-device defect class and the whole
+// fleet is green here, so this rule now GATES. Per-app escape hatch:
+// qa/baseline.json "keyboard/enforce": false keeps it a WARN — reserved for an
+// app that is genuinely red and can't be fixed in the same change (the point of
+// the promotion is to fix the trap, not opt out of it).
+const enforceKeyboard = baseline['keyboard/enforce'] !== false;
+const keyboardSev = (id, message, detail) => (enforceKeyboard ? fail : warn)(id, message, detail);
+
 const ruleKeyboardDismissEscape = () => {
   if (surface !== 'rn') return skip('rn/keyboard-dismiss-escape', 'Not an RN app');
   const files = srcSourceFiles();
@@ -532,13 +556,12 @@ const ruleKeyboardDismissEscape = () => {
   for (const f of files) {
     const raw = readText(f);
     if (!raw) continue;
-    const code = stripComments(raw);
-    if (KB_PERSIST_RE.test(code) && !KB_ESCAPE_RE.test(code)) {
+    if (keyboardTrapped(stripComments(raw))) {
       hits.push(`${relative(appDir, f)}: persists the keyboard on submit (blurOnSubmit={false} / submitBehavior="submit") but never calls Keyboard.dismiss() / .blur()`);
     }
   }
   if (hits.length) {
-    return warn('rn/keyboard-dismiss-escape',
+    return keyboardSev('rn/keyboard-dismiss-escape',
       'Keyboard can get stuck: a persistent-keyboard TextInput has no empty/idle dismiss escape — submitting an empty field must call Keyboard.dismiss() so the user is never trapped with the keyboard open', hits);
   }
   return pass('rn/keyboard-dismiss-escape', 'No persistent-keyboard inputs without a dismiss escape');
@@ -581,6 +604,188 @@ const ruleModalSafeAreaProvider = () => {
       'Safe area ignored inside a full-screen Modal: a presentationStyle="fullScreen" Modal reads safe-area insets but nests no SafeAreaProvider — wrap the modal content in <SafeAreaProvider initialMetrics={initialWindowMetrics}> so the title/actions clear the notch and home indicator', hits);
   }
   return pass('rn/modal-safe-area-provider', 'No full-screen Modals consuming safe-area without their own provider');
+};
+
+// ---------- rules: UX interaction baseline (canon proposal studio-20260702-1) ----------
+//
+// Seeded 2026-07-02 from Josh's recurring on-device corrections across four apps
+// (tend, packing-list, grocery-list, workout-timer) — the defect class he named
+// "bugs only I am able to catch by manually testing the app on my phone." The
+// three mechanically-checkable rules of the UX-interaction-baseline proposal land
+// here as WARN (codify→backfill→shipgate, like the testing/i18n/theme tiers); the
+// non-mechanical rules of that proposal ride qa/review-rubric.md.
+//
+// Built FALSE-POSITIVES-FIRST (these run on every app forever): each strips
+// comments (stripComments, like the parity rules) so prose/doc mentions never
+// match, keys on real JSX/usage rather than a name in text, and honours a
+// documented per-app escape in qa/baseline.json — set `"<rule-id>/skip": true`
+// to disable the rule for a legitimate deliberate design, or an array of path
+// fragments (`["FooScreen.tsx"]`) to exempt specific files — so an exception is
+// recorded once instead of the rule nagging forever.
+const ruleSkipsAll = (id) => baseline[`${id}/skip`] === true;
+const ruleSkipsFile = (id, relPath) => {
+  const s = baseline[`${id}/skip`];
+  return Array.isArray(s) && s.some((frag) => relPath.replace(/\\/g, '/').includes(frag));
+};
+
+// Return {inner, end} for the balanced (…) whose opening bracket is at `open`, or
+// null if unbalanced. Comments are already stripped; string literals are kept, so
+// a stray bracket inside a string could skew the count — acceptable for these
+// WARN heuristics (effect-arg strings almost never carry an unbalanced paren).
+const matchBalanced = (code, open, oc = '(', cc = ')') => {
+  let depth = 0;
+  for (let i = open; i < code.length; i++) {
+    const ch = code[i];
+    if (ch === oc) depth++;
+    else if (ch === cc) { depth--; if (depth === 0) return { inner: code.slice(open + 1, i), end: i }; }
+  }
+  return null;
+};
+
+// rn/entry-screen-autofocus — a screen whose PRIMARY interaction is text entry
+// should raise the keyboard on mount so the user can just start typing, with an
+// explicit .focus() fallback (Android autoFocus can no-op after a navigation
+// transition). Flagged conservatively to spare the many screens that merely
+// CONTAIN an input: only a file under src/screens/ whose basename reads as a
+// create/new/add/edit/compose surface (verb + a following PascalCase word, so
+// "AddExpense" matches but "AddressScreen" does not) AND that renders a
+// <TextInput> AND has neither an autoFocus prop (that isn't ={false}) nor any
+// .focus() call. Recurred: tend new-person 2026-06-29, packing-list trip-info
+// 2026-05-23. (canon studio-20260702-1)
+const ENTRY_SCREEN_NAME_RE = /(?:^|\/)(?:New|Add|Create|Edit|Compose)[A-Z][A-Za-z]*\.(?:jsx?|tsx?)$/;
+const TEXTINPUT_JSX_RE = /<\s*TextInput\b/;
+const AUTOFOCUS_RE = /\bautoFocus\b(?!\s*=\s*\{?\s*false)/;
+const FOCUS_CALL_RE = /\.\s*focus\s*\(/;
+
+const ruleEntryScreenAutofocus = () => {
+  const id = 'rn/entry-screen-autofocus';
+  if (surface !== 'rn') return skip(id, 'Not an RN app');
+  if (ruleSkipsAll(id)) return skip(id, 'Disabled via qa/baseline.json "rn/entry-screen-autofocus/skip"');
+  const files = srcSourceFiles();
+  if (!files.length) return skip(id, 'No src/ source files');
+  const hits = [];
+  for (const f of files) {
+    const rel = relative(appDir, f);
+    const relSrc = relative(join(appDir, 'src'), f).replace(/\\/g, '/');
+    if (!relSrc.startsWith('screens/')) continue;         // screens only
+    if (!ENTRY_SCREEN_NAME_RE.test('/' + relSrc)) continue; // entry-primary by name
+    if (ruleSkipsFile(id, rel)) continue;
+    const raw = readText(f);
+    if (!raw) continue;
+    const code = stripComments(raw);
+    if (!TEXTINPUT_JSX_RE.test(code)) continue;           // must render an input
+    if (AUTOFOCUS_RE.test(code) || FOCUS_CALL_RE.test(code)) continue; // already focuses
+    hits.push(`${rel}: entry screen renders <TextInput> but never autoFocuses or calls .focus() — raise the keyboard on mount (autoFocus + a .focus() fallback for Android)`);
+  }
+  if (hits.length) {
+    return warn(id,
+      'Entry screen does not focus its field on mount — a create/edit screen whose primary action is text entry should auto-focus its first input (autoFocus, with an explicit .focus() fallback) so the keyboard is up and ready', hits);
+  }
+  return pass(id, 'Entry screens focus their first field on mount');
+};
+
+// rn/create-on-mount — draft-first creation: a store create/insert must fire from
+// an explicit user Save handler, never from a mount/navigation effect. The
+// anti-pattern (tend's blank person, 2026-06-29) writes a record the instant a
+// "new X" screen mounts, so backing out leaves an empty ghost. We look INSIDE
+// mount effects only — useEffect(…, []) with EMPTY deps, or useFocusEffect(…) —
+// for a creation call (create/insert/add/save<Noun>(…), or a .create( / .insert(
+// store method), excluding the framework factory functions that legitimately run
+// on mount (createRef/createContext/createNativeStackNavigator/addListener/…). A
+// non-empty / dynamic deps array is treated as not-mount (conservative: no flag).
+// WARN — a real save-on-mount is rare, so a hit is worth a human look, and a
+// deliberate case is recorded via the baseline skip. (canon studio-20260702-1)
+const CREATE_CALL_RE = /\b(?:create|insert|add|save)[A-Z]\w*\s*\(|\.\s*(?:create|insert)\s*\(/;
+const CREATE_DENYLIST = /\b(?:createRef|createContext|createElement|createNativeStackNavigator|createStackNavigator|createBottomTabNavigator|createMaterialTopTabNavigator|createDrawerNavigator|createAnimatedComponent|createSelector|createStore|createNavigationContainerRef|createURL|addListener|addEventListener)\b/g;
+
+const ruleCreateOnMount = () => {
+  const id = 'rn/create-on-mount';
+  if (surface !== 'rn') return skip(id, 'Not an RN app');
+  if (ruleSkipsAll(id)) return skip(id, 'Disabled via qa/baseline.json "rn/create-on-mount/skip"');
+  const files = srcSourceFiles();
+  if (!files.length) return skip(id, 'No src/ source files');
+  const hits = [];
+  for (const f of files) {
+    const rel = relative(appDir, f);
+    if (ruleSkipsFile(id, rel)) continue;
+    const raw = readText(f);
+    if (!raw) continue;
+    const code = stripComments(raw);
+    let flagged = false;
+    for (const kind of ['useEffect', 'useFocusEffect']) {
+      if (flagged) break;
+      const re = new RegExp(`\\b${kind}\\s*\\(`, 'g');
+      let m;
+      while ((m = re.exec(code)) !== null) {
+        const open = code.indexOf('(', m.index);
+        if (open < 0) break;
+        const bal = matchBalanced(code, open);
+        if (!bal) continue;
+        const args = bal.inner;
+        let body = args;
+        if (kind === 'useEffect') {
+          // deps = the trailing top-level [...]; only an EMPTY [] is a mount effect.
+          const depsMatch = args.match(/,\s*(\[[^\]]*\])\s*$/);
+          if (!depsMatch) continue;                            // no clear deps arg → skip
+          if (depsMatch[1].replace(/\s/g, '') !== '[]') continue; // has deps → not mount-only
+          body = args.slice(0, depsMatch.index);
+        }
+        if (!CREATE_CALL_RE.test(body)) continue;
+        // If the only creation-like token is a denylisted factory, don't flag.
+        const stripped = body.replace(CREATE_DENYLIST, '');
+        if (!CREATE_CALL_RE.test(stripped)) continue;
+        const line = code.slice(0, open).split(/\r?\n/).length;
+        hits.push(`${rel}:${line}: ${kind}(${kind === 'useEffect' ? '…, []' : '…'}) fires a create/insert call on ${kind === 'useEffect' ? 'mount' : 'navigation focus'} — write the record from an explicit Save handler, not a mount effect (draft-first)`);
+        flagged = true;
+        break;
+      }
+    }
+  }
+  if (hits.length) {
+    return warn(id,
+      'Record created on mount/navigation, not on Save — a create/insert call fires from a useEffect(…, []) / useFocusEffect rather than a user Save action; backing out then leaves a blank record (the draft-first violation that persisted tend\'s blank person). Move the write to the Save handler', hits);
+  }
+  return pass(id, 'No store create/insert calls fired from a mount or navigation effect');
+};
+
+// rn/scrollform-keyboard-avoidance — a scrollable form (a <ScrollView> holding
+// 2+ <TextInput>s) must keep the focused field above the keyboard: a
+// KeyboardAvoidingView ancestor (or a KeyboardAware* scroll view), plus a way to
+// dismiss the keyboard (keyboardDismissMode / keyboardShouldPersistTaps).
+// Without it the lower fields sit under the keyboard with no way out. Recurred:
+// tend HTC form 2026-06-27, grocery-list add-box 2026-06-13 (the § Interaction
+// safety seed). Flagged per-file (the common co-located form component); a form
+// split across files, or one that avoids the keyboard by another means, records
+// the exception via the baseline skip. WARN. (canon studio-20260702-1)
+const SCROLLVIEW_RE = /<\s*ScrollView\b/;
+const KB_AWARE_SCROLL_RE = /<\s*KeyboardAware(?:ScrollView|FlatList|SectionList)\b|<\s*KeyboardAvoidingView\b/;
+const KB_HANDLING_RE = /keyboardDismissMode\s*=|keyboardShouldPersistTaps\s*=/;
+
+const ruleScrollformKeyboardAvoidance = () => {
+  const id = 'rn/scrollform-keyboard-avoidance';
+  if (surface !== 'rn') return skip(id, 'Not an RN app');
+  if (ruleSkipsAll(id)) return skip(id, 'Disabled via qa/baseline.json "rn/scrollform-keyboard-avoidance/skip"');
+  const files = srcSourceFiles();
+  if (!files.length) return skip(id, 'No src/ source files');
+  const hits = [];
+  for (const f of files) {
+    const rel = relative(appDir, f);
+    if (ruleSkipsFile(id, rel)) continue;
+    const raw = readText(f);
+    if (!raw) continue;
+    const code = stripComments(raw);
+    if (!SCROLLVIEW_RE.test(code)) continue;
+    const inputs = (code.match(/<\s*TextInput\b/g) || []).length;
+    if (inputs < 2) continue;                        // a single input rarely gets clipped
+    if (KB_AWARE_SCROLL_RE.test(code)) continue;     // KeyboardAvoidingView / KeyboardAware* present
+    if (KB_HANDLING_RE.test(code)) continue;         // dismiss / persist-taps handling present
+    hits.push(`${rel}: <ScrollView> with ${inputs} <TextInput>s but no KeyboardAvoidingView / KeyboardAware* scroll and no keyboardDismissMode / keyboardShouldPersistTaps — lower fields can sit under the keyboard`);
+  }
+  if (hits.length) {
+    return warn(id,
+      'Scrollable form has no keyboard avoidance — a <ScrollView> with 2+ TextInputs needs a KeyboardAvoidingView (or a KeyboardAware* scroll view) so the focused field stays visible, plus keyboardDismissMode / keyboardShouldPersistTaps for a tap-out. Extends § Interaction safety (rn/keyboard-dismiss-escape)', hits);
+  }
+  return pass(id, 'Scrollable multi-input forms handle keyboard avoidance');
 };
 
 // The cold-start splash renders the "josh approved" wordmark with a NEGATIVE
@@ -704,11 +909,10 @@ const ruleTestScriptPresent = () => {
 // __tests__ dir) under src/. Deliberately a presence check, not coverage %:
 // the bar is "the trust core is covered", which a human/reviewer judges; this
 // only catches the all-too-common "test script wired, zero tests written".
-const TEST_FILE_RE = /(?:\.(?:test|spec)\.[jt]sx?$)|(?:[\\/]__tests__[\\/])/;
 const ruleTrustCoreCovered = () => {
   const root = join(appDir, 'src');
   if (!exists(root)) return skip('test/trust-core-covered', 'No src/ directory');
-  const files = srcSourceFiles().filter((f) => TEST_FILE_RE.test(f));
+  const files = srcSourceFiles({ includeTests: true }).filter((f) => TEST_FILE_RE.test(f));
   if (!files.length) {
     return testWarn('test/trust-core-covered',
       'No *.test / *.spec / __tests__ files under src/ — the trust core (the module a bug silently corrupts) must have unit tests');
@@ -751,6 +955,45 @@ const ruleFlowDrift = async ({ appDir }) => {
   } catch (e) {
     return warn('flows/lint', `Flow linter could not run: ${e.message}`);
   }
+};
+
+// ---------- rule: action coverage (Uplevel-3 T3) ----------
+//
+// Tier-2 journeys prove the happy path; they don't prove EVERY user-facing
+// action works. scripts/qa/action-coverage.mjs enumerates the app's actions from
+// src/** into the tracked registry qa/actions.json, each mapped to a proof
+// (tier2-assert | rntl | unit | none). This rule surfaces the gap: WARN when the
+// registry is missing or carries any unproven (proof.kind "none") or stale
+// entries. Promote per-app to FAIL with `"coverage/enforce": true` in
+// qa/baseline.json once the app is backfilled green — same codify→backfill→
+// shipgate rollout, and the same enforce plumbing, as the testing/i18n/theme
+// tiers (the backfill stages own closing the gaps).
+const enforceCoverage = baseline['coverage/enforce'] === true;
+const coverageWarn = (id, message, detail) => (enforceCoverage ? fail : warn)(id, message, detail);
+
+const ruleActionsMapped = () => {
+  if (surface !== 'rn') return skip('coverage/actions-mapped', 'Not a React Native app');
+  const p = join(appDir, 'qa', 'actions.json');
+  if (!exists(p)) {
+    return coverageWarn('coverage/actions-mapped',
+      'No qa/actions.json — run `node scripts/qa/action-coverage.mjs <app>` to map every user-facing action to a proof (Uplevel-3 T3)');
+  }
+  const reg = readJson(p);
+  if (!reg || !Array.isArray(reg.actions)) {
+    return coverageWarn('coverage/actions-mapped', 'qa/actions.json is unreadable or has no actions array');
+  }
+  const actions = reg.actions;
+  const unproven = actions.filter((a) => !a.stale && (!a.proof || a.proof.kind === 'none'));
+  const stale = actions.filter((a) => a.stale);
+  if (unproven.length || stale.length) {
+    const detail = [];
+    if (unproven.length) detail.push(`${unproven.length} action(s) with no proof: ${unproven.slice(0, 8).map((a) => a.id).join(', ')}${unproven.length > 8 ? ' …' : ''}`);
+    if (stale.length) detail.push(`${stale.length} stale entr${stale.length === 1 ? 'y' : 'ies'} (action gone from code): ${stale.slice(0, 8).map((a) => a.id).join(', ')}`);
+    return coverageWarn('coverage/actions-mapped',
+      `Action coverage incomplete — ${unproven.length} unproven / ${stale.length} stale. Backfill each gap's cheapest proof (unit → rntl → tier2-assert) or remove the stale entry (canon § QA & testing)`,
+      detail);
+  }
+  return pass('coverage/actions-mapped', `All ${actions.length} user-facing action(s) mapped to a proof`);
 };
 
 // ---------- rule: translation-readiness (canon § Translations) ----------
@@ -805,7 +1048,14 @@ const ruleNoHardcodedStrings = () => {
   for (const f of files) {
     const raw = readText(f);
     if (!raw) continue;
-    const text = stripComments(raw);
+    // Type-alias declarations (`type Props = CompositeScreenProps<A, B>;`) are
+    // pure type-land — their generic params (`>, Name<`) pattern-match the JSX
+    // scan below as fake copy (found 2026-07-08 on the home-maintenance build:
+    // `…'Due'>, NativeStackScreenProps<…`). Strip them before scanning.
+    const text = stripComments(raw).replace(
+      /^[ \t]*(?:export\s+)?type\s+[A-Za-z0-9_]+\s*=[^;]*;/gm,
+      ''
+    );
     // 1) Raw JSX text content: >copy< (no braces/tags inside). The opening `>`
     //    must close a tag (not be an operator like `=>` / `>=`) and the closing
     //    `<` must open a tag (a tag-name letter or a `/`), never a comparison
@@ -1071,6 +1321,448 @@ const ruleScreenshotCaptionNoPrice = () => {
 
 // ---------- runner ----------
 
+// Committed demo GIFs must be framed correctly and free of the simulator home
+// screen. The hard, fail-closed gate lives at production time in
+// demo-capture.mjs; this is the committed-asset belt-and-suspenders. Cheap part
+// (works everywhere incl. app-synced CI): every demo gif must carry a
+// `.frame.json` device-frame spec — its absence means an ungated / legacy asset
+// to re-render. Full part (factory only, where demo-frame-check.mjs + ffmpeg are
+// present): run the gate and FAIL on a launcher/dims defect. Degrades to the
+// cheap check when the module or ffmpeg is unavailable, so app CI never reds on it.
+async function ruleDemoFramesValid({ appDir }) {
+  const demoDir = join(appDir, 'store-assets', 'demos');
+  if (!exists(demoDir)) return skip('demo/frames', 'no store-assets/demos');
+  let gifs;
+  try { gifs = readdirSync(demoDir).filter((f) => f.endsWith('.gif')); } catch { return skip('demo/frames', 'demos unreadable'); }
+  if (!gifs.length) return skip('demo/frames', 'no demo gifs');
+
+  let gate = null;
+  try { gate = (await import(new URL('./demo-frame-check.mjs', import.meta.url).href)).checkDemoFile; } catch { /* app-synced context */ }
+  let ffmpegOk = false;
+  try { execSync('command -v ffmpeg && command -v ffprobe', { stdio: 'ignore' }); ffmpegOk = true; } catch { /* no ffmpeg */ }
+
+  const results = [];
+  for (const gif of gifs) {
+    const gifPath = join(demoDir, gif);
+    if (!exists(gifPath.replace(/\.gif$/, '.frame.json'))) {
+      results.push(warn('demo/frame-spec', `${gif} has no frame-spec sidecar — re-render via demo-capture so it is gated`));
+    }
+    if (gate && ffmpegOk) {
+      try {
+        const res = gate(gifPath);
+        const hard = res.findings.filter((f) => f.severity === 'fail' && f.check !== 'io');
+        if (hard.length) results.push(fail('demo/frame-quality', `${gif} misframed or shows the home screen: ${hard.map((f) => f.message).join('; ')}`));
+      } catch { /* decode error — leave to the production gate */ }
+    }
+  }
+  return results.length ? results : pass('demo/frames', `${gifs.length} demo gif(s) carry a frame-spec`);
+}
+
+// ---------- rules: maintainability standards (engineering-standards.md §1, §6) ----------
+//
+// The mechanical half of the maintainability standards ratchet (05-maintainability
+// Work item 4 / ticket eng-standards-ratchet). WARN, not FAIL — codify→backfill→
+// shipgate, like the testing/i18n/theme tiers — so a real decomposition signal is
+// surfaced without reddening CI while the current outliers (eng-oversized-screens)
+// are decomposed in their own stages. Built false-positives-first: each keys on a
+// mechanical fact (line count, dep count, repo-wide reference count), honours the
+// same per-app escape as the UX rules (baseline "<id>/skip": true or ["Frag.tsx"]),
+// and only names ceilings that engineering-standards.md already documents. No
+// style-cop rules — these are predictive smells (a file to split, a dep to justify,
+// dead code to drop), not formatting opinions.
+
+// maint/file-size — the soft size ceilings from §1: screens ≤400, components ≤300,
+// stores ≤350 lines. Pure data tables are exempt BY OMISSION — only screens/,
+// components/, store/ are bucketed; data/ (seedCatalogData 1098, categoryKeywords
+// 509), lib/, sync/ are never counted. A file over its ceiling is a decomposition
+// signal, not a hard gate.
+const SIZE_CEILINGS = [
+  { dir: 'screens/', ceiling: 400, label: 'screen' },
+  { dir: 'components/', ceiling: 300, label: 'component' },
+  { dir: 'store/', ceiling: 350, label: 'store' },
+];
+const ruleFileSizeCeiling = () => {
+  const id = 'maint/file-size';
+  if (surface !== 'rn') return skip(id, 'Not an RN app');
+  if (ruleSkipsAll(id)) return skip(id, 'Disabled via qa/baseline.json "maint/file-size/skip"');
+  const files = srcSourceFiles();
+  if (!files.length) return skip(id, 'No src/ source files');
+  const hits = [];
+  for (const f of files) {
+    const rel = relative(appDir, f);
+    const relSrc = relative(join(appDir, 'src'), f).replace(/\\/g, '/');
+    if (relSrc.endsWith('.d.ts')) continue;
+    const bucket = SIZE_CEILINGS.find((b) => relSrc.startsWith(b.dir));
+    if (!bucket) continue;                                   // data/ tables, lib/, sync/ exempt
+    if (ruleSkipsFile(id, rel)) continue;
+    const raw = readText(f);
+    if (raw == null) continue;
+    const lines = raw.split(/\r?\n/).length;
+    if (lines > bucket.ceiling) {
+      hits.push(`${rel}: ${lines} lines > ${bucket.ceiling}-line ${bucket.label} ceiling — extract a cohesive sub-view or hook`);
+    }
+  }
+  if (hits.length) {
+    return warn(id,
+      'A screen/component/store file is over its soft size ceiling (screens ≤400, components ≤300, stores ≤350; pure data tables exempt) — a decomposition signal. Split it, or record a deliberate exception in qa/baseline.json "maint/file-size/skip": ["File.tsx"]', hits);
+  }
+  return pass(id, 'Screen/component/store files are within their size ceilings');
+};
+
+// maint/dep-budget — §6 dependency policy: every dep is a liability. The RN fleet
+// runs 24–39 runtime deps (Expo modularity inflates the raw count); a jump past
+// the budget signals a cluster of non-platform deps to justify. WARN; the per-app
+// budget can be raised with baseline "maint/dep-budget": <n> when growth is
+// justified (distinct key from the "/skip" escape).
+const RUNTIME_DEP_BUDGET = 48; // fleet max 39 (grocery-list) as of 2026-07 + headroom
+const ruleDepBudget = () => {
+  const id = 'maint/dep-budget';
+  if (surface !== 'rn') return skip(id, 'Not an RN app'); // budget is calibrated to the RN fleet
+  if (ruleSkipsAll(id)) return skip(id, 'Disabled via qa/baseline.json "maint/dep-budget/skip"');
+  const pkg = readJson(join(appDir, 'package.json'));
+  if (!pkg) return skip(id, 'No package.json');
+  const n = Object.keys(pkg.dependencies || {}).length;
+  const budget = typeof baseline['maint/dep-budget'] === 'number' ? baseline['maint/dep-budget'] : RUNTIME_DEP_BUDGET;
+  if (n > budget) {
+    return warn(id,
+      `${n} runtime dependencies exceed the budget of ${budget} — prefer Expo/stdlib and state a one-line justification per addition (§6). Raise the per-app budget in qa/baseline.json "maint/dep-budget": ${n} if this growth is justified`,
+      [`package.json declares ${n} entries under "dependencies"`]);
+  }
+  return pass(id, `${n} runtime dependencies within the budget of ${budget}`);
+};
+
+// maint/orphaned-export was PROTOTYPED and DROPPED (2026-07-03, ticket
+// eng-standards-ratchet). A grep-based "exported symbol referenced nowhere else"
+// rule cannot meet the false-positives-first bar under the shell/app boundary:
+// the app shell OVERWRITE-SYNCS a full canonical API surface (kv.ts accessors,
+// EmptyState/ScreenHeader/SettingsAbout, backup/log helpers) into every app, and
+// an app that wires only a subset is NOT carrying dead code — those exports are
+// shared scaffolding by design. Tested against the fleet it flagged ~20 such
+// shell exports per app as "remove it" — exactly wrong advice. Separating true
+// app-authored dead code from shell-provided-unused-API would require coupling
+// qa-canonical to the shell file map (unavailable in the app-synced CI context)
+// plus reserved-config awareness. Deferred to a tsserver/ts-morph-grade pass;
+// the two clean, predictive rules above ship instead.
+
+// ---------- rules: UX interaction patterns (Uplevel-3 T3, 03-functional-ux-depth) ----------
+//
+// Deterministic checks for the UX defect class Josh keeps hitting on-device —
+// unreachable actions, dead-end lists, un-confirmed destructive taps. WARN by
+// default (codify→backfill→shipgate, like the testing/i18n/theme tiers);
+// promote a per-app to FAIL with qa/baseline.json "ux/enforce": true once the
+// backfill stage closes its gaps. Built FALSE-POSITIVES-FIRST: each keys on real
+// JSX/usage (comments stripped so prose never matches), errs toward SILENCE, and
+// honours the same per-app escape as the other UX rules (baseline "<id>/skip":
+// true, or an array of path fragments). Each rule's pure core is self-tested
+// (`node qa-canonical.mjs --self-test`) against a known-bad + known-good string.
+const enforceUx = baseline['ux/enforce'] === true;
+const uxWarn = (id, message, detail) => (enforceUx ? fail : warn)(id, message, detail);
+
+// The pressable elements whose OWN tap target we measure. Children (an icon View
+// inside a larger pressable) are never inspected — we only read the pressable's
+// own `style`, so an icon-inside-a-bigger-button case can't false-positive.
+const PRESSABLE_TAGS = ['Pressable', 'TouchableOpacity', 'TouchableHighlight', 'TouchableWithoutFeedback'];
+
+// Return the opening JSX tag substring starting at `<` index `ltIdx` — the text
+// up to and including the `>` that closes the tag, brace/string-aware so a `>`
+// inside an attribute expression (`onPress={a > b ? …}`) or string doesn't end it.
+const openingTag = (code, ltIdx) => {
+  let depth = 0, state = 'code';
+  for (let i = ltIdx; i < code.length; i++) {
+    const ch = code[i];
+    if (state === 'code') {
+      if (ch === '{') depth++;
+      else if (ch === '}') { if (depth > 0) depth--; }
+      else if (ch === "'") state = 'sq';
+      else if (ch === '"') state = 'dq';
+      else if (ch === '`') state = 'tpl';
+      else if (ch === '>' && depth === 0) return code.slice(ltIdx, i + 1);
+    } else {
+      if (ch === '\\') { i++; continue; }
+      if (state === 'sq' && ch === "'") state = 'code';
+      else if (state === 'dq' && ch === '"') state = 'code';
+      else if (state === 'tpl' && ch === '`') state = 'code';
+    }
+  }
+  return code.slice(ltIdx);
+};
+
+// Pull the balanced {…} value of a JSX attribute out of an opening tag, or null.
+const attrBraceValue = (tag, attr) => {
+  const m = new RegExp(`\\b${attr}\\s*=\\s*\\{`).exec(tag);
+  if (!m) return null;
+  const open = tag.indexOf('{', m.index);
+  const bal = matchBalanced(tag, open, '{', '}');
+  return bal ? bal.inner.trim() : null;
+};
+
+// Resolve a named style (`styles.foo` / `s.foo`) to its object body from the
+// file's StyleSheet.create block(s). Best-effort: returns '' when not found.
+const resolveNamedStyle = (code, name) => {
+  const re = new RegExp(`\\b${name}\\s*:\\s*\\{`, 'g');
+  let m;
+  while ((m = re.exec(code)) !== null) {
+    const open = code.indexOf('{', m.index);
+    const bal = matchBalanced(code, open, '{', '}');
+    if (bal) return bal.inner;
+  }
+  return '';
+};
+
+// A numeric size literal < 44 on the pressable's own style; `target.min` / a
+// hitSlop token / a percentage or variable size are all non-matches (pass).
+const STYLE_SIZE_RE = /\b(minHeight|height|minWidth|width)\s*:\s*(\d+(?:\.\d+)?)\b/g;
+const TARGET_TOKEN_RE = /\btarget\s*\.\s*min\b|\bMIN(?:_TAP)?_TARGET\b|\bhitSlop\b/;
+
+// Pure core (self-tested): find pressables whose own style sets a sub-44 size and
+// carry no hitSlop. Known blind spots (deliberate — err toward silence): sizes
+// from variables/props/computed expressions, styles defined in another file,
+// percentage/`'auto'` widths, and array-of-conditional styles beyond the named
+// refs we can resolve. A miss is safer than nagging on a healthy screen.
+const detectSmallTouchTargets = (code) => {
+  const hits = [];
+  for (const tag of PRESSABLE_TAGS) {
+    const re = new RegExp(`<\\s*${tag}\\b`, 'g');
+    let m;
+    while ((m = re.exec(code)) !== null) {
+      const openTag = openingTag(code, m.index);
+      if (/\bhitSlop\b/.test(openTag)) continue;             // expanded target → fine
+      const styleVal = attrBraceValue(openTag, 'style');
+      if (styleVal == null) continue;                        // no own style to measure
+      let styleText = styleVal;
+      for (const ref of styleVal.matchAll(/\b(?:styles?|s|st)\.(\w+)/g)) {
+        styleText += '\n' + resolveNamedStyle(code, ref[1]);
+      }
+      // A shadow/text-shadow offset is `{ width: 0, height: 4 }` — a shadow
+      // vector, NOT a tap-target dimension. Strip these before measuring so a
+      // FAB's own `shadowOffset: { width: 0 }` doesn't read as a 0dp target
+      // (packing-list FAB, found 2026-07-08 T3 backfill).
+      styleText = styleText.replace(/(?:shadowOffset|textShadowOffset)\s*:\s*\{[^}]*\}/g, '');
+      if (TARGET_TOKEN_RE.test(styleText)) continue;         // uses target.min / hitSlop → fine
+      STYLE_SIZE_RE.lastIndex = 0;
+      let sm, small = null;
+      while ((sm = STYLE_SIZE_RE.exec(styleText)) !== null) {
+        if (parseFloat(sm[2]) < 44) { small = `${sm[1]}: ${sm[2]}`; break; }
+      }
+      if (small) {
+        const line = code.slice(0, m.index).split(/\r?\n/).length;
+        hits.push({ line, detail: `<${tag}> own style sets ${small} (< 44dp) and passes no hitSlop — tap target below the 44dp floor (raise the size, add hitSlop, or use target.min)` });
+      }
+    }
+  }
+  return hits;
+};
+
+const ruleTouchTargetMin = () => {
+  const id = 'ux/touch-target-min';
+  if (surface !== 'rn') return skip(id, 'Not an RN app');
+  if (ruleSkipsAll(id)) return skip(id, 'Disabled via qa/baseline.json "ux/touch-target-min/skip"');
+  const files = srcSourceFiles().filter((f) => {
+    const rel = relative(join(appDir, 'src'), f).replace(/\\/g, '/');
+    return rel.startsWith('screens/') || rel.startsWith('components/');
+  });
+  if (!files.length) return skip(id, 'No screen/component source files');
+  const hits = [];
+  for (const f of files) {
+    const rel = relative(appDir, f);
+    if (ruleSkipsFile(id, rel)) continue;
+    const raw = readText(f);
+    if (!raw) continue;
+    for (const h of detectSmallTouchTargets(stripComments(raw))) hits.push(`${rel}:${h.line}: ${h.detail}`);
+  }
+  if (hits.length) {
+    return uxWarn(id,
+      'Touch target below 44dp — a pressable\'s own style sets a sub-44 height/width with no hitSlop. A user (especially large-finger / motor-impaired) can miss it. Raise the size to 44, add hitSlop, or size from target.min', hits);
+  }
+  return pass(id, 'No pressables with a sub-44dp own size and no hitSlop');
+};
+
+// Pure core (self-tested): a FlatList/SectionList surface that offers no empty
+// state. Returns null when the file renders no list (not applicable), false when
+// it renders one WITH an empty surface (EmptyState / ListEmptyComponent / a
+// zero-length branch), true when a list has NO empty surface. Blind spot: an
+// empty state driven by a pre-computed boolean (`isEmpty`) reads as missing — a
+// WARN worth a look, cleared by rendering <EmptyState/> or a baseline skip.
+const LIST_RE = /<\s*(?:FlatList|SectionList)\b/;
+const EMPTY_SURFACE_RE = /ListEmptyComponent|<\s*EmptyState\b|\.length\s*(?:===?|!==?|<|<=|>|>=)\s*\d|!\s*\w[\w.]*\.length|\.length\s*\?/;
+const detectMissingEmptyState = (code) => {
+  if (!LIST_RE.test(code)) return null;
+  return !EMPTY_SURFACE_RE.test(code);
+};
+
+const ruleEmptyStatePresent = () => {
+  const id = 'ux/empty-state-present';
+  if (surface !== 'rn') return skip(id, 'Not an RN app');
+  if (ruleSkipsAll(id)) return skip(id, 'Disabled via qa/baseline.json "ux/empty-state-present/skip"');
+  const files = srcSourceFiles().filter((f) => {
+    const rel = relative(join(appDir, 'src'), f).replace(/\\/g, '/');
+    return rel.startsWith('screens/') || rel.startsWith('components/');
+  });
+  if (!files.length) return skip(id, 'No screen/component source files');
+  const hits = [];
+  for (const f of files) {
+    const rel = relative(appDir, f);
+    if (ruleSkipsFile(id, rel)) continue;
+    const raw = readText(f);
+    if (!raw) continue;
+    if (detectMissingEmptyState(stripComments(raw)) === true) {
+      hits.push(`${rel}: renders a FlatList/SectionList but no <EmptyState/> / ListEmptyComponent / zero-length branch — the first-run / all-cleared screen is blank`);
+    }
+  }
+  if (hits.length) {
+    return uxWarn(id,
+      'List with no empty state — a FlatList/SectionList surface must render an empty state (the canon § First-run moment bar): <EmptyState/>, ListEmptyComponent, or a zero-length branch to an alternative surface, so the first-run and all-cleared screens are never blank', hits);
+  }
+  return pass(id, 'Every list surface renders an empty state');
+};
+
+// Pure core (self-tested): destructive data deletes that sit in a file with no
+// confirm/undo. Returns null when the file has no destructive call, false when a
+// confirm (Alert.alert / confirm*() / <Confirm…) or an `undo` identifier is
+// present, else the unguarded call sites.
+//
+// The verb is a camelCase data action — deleteKit(, removeStaple(, store.deleteList( —
+// NOT a bare `.remove(` / `.delete(`. That lower-case dot-form is dominated by
+// event-subscription cleanup (`subscription.remove()`, `AppState.addEventListener(…).remove()`)
+// and Set/Map `.delete(x)`, none of which are user-data deletes — matching it
+// trained the linter to cry wolf on every modal's listener teardown (grocery-list
+// had 6 such false hits). So we require a Capital after the verb (a named data
+// action) and additionally denylist the camelCase framework removers. Blind
+// spots (err toward silence): a lower-case `list.remove(item)` data delete is not
+// matched; a confirm that lives in a different file than the delete reads as
+// unguarded (fires) — cleared by co-locating the confirm or a baseline skip.
+const DELETE_CALL_RE = /\b(?:delete|remove)([A-Z]\w*)\s*\(/g;
+const DELETE_DENYLIST = /\b(?:removeListener|removeEventListener|removeAllListeners|removeItem|removeChangeListener|removeSubscription|removeChild|removeClippedSubviews)\b/;
+// `undo` is matched as a substring (not a bounded word): real undo affordances
+// are camelCase identifiers — showUndoToast, undoDelete, handleUndo — where the
+// token is embedded, not standalone. Comments are already stripped, so a prose
+// "undo" can't match.
+// A guard is: an Alert.alert, a confirm*( call, a <Confirm…> element, an `undo`
+// affordance, OR the canonical cross-platform `useConfirm()` primitive (its
+// `confirm.open({…})` opens a titled Cancel/Confirm card — grocery-list's Dialogs,
+// added 2026-07-08 for the T3 destructive-confirm backfill). `confirm.open(` is
+// not caught by `confirm\w*\(` (the dot breaks the \w run), so match it explicitly.
+const CONFIRM_OR_UNDO_RE = /\bAlert\s*\.\s*alert\s*\(|\bconfirm\w*\s*\(|\buseConfirm\b|<\s*Confirm|undo/i;
+// A remove<Noun>( that has a symmetric add<Noun>( / set<Noun>( in the same file
+// is a reversible TOGGLE (mark/unmark a "usual", pin/unpin), not an unrecoverable
+// data delete — one tap flips it straight back. Matching it trained the linter to
+// cry wolf on every toggle (grocery-list's ItemEditor `toggleUsual`: addStaple /
+// removeStaple). So a remove whose noun has a same-file add/set counterpart is
+// excused (found 2026-07-08, T3 backfill).
+const hasToggleCounterpart = (code, noun) =>
+  new RegExp(`\\b(?:add|set)${noun}\\s*\\(`).test(code);
+const detectUnconfirmedDeletes = (code) => {
+  const hasGuard = CONFIRM_OR_UNDO_RE.test(code);
+  const hits = [];
+  DELETE_CALL_RE.lastIndex = 0;
+  let m;
+  while ((m = DELETE_CALL_RE.exec(code)) !== null) {
+    const window = code.slice(Math.max(0, m.index - 24), m.index + m[0].length + 4);
+    if (DELETE_DENYLIST.test(window)) continue;
+    if (/^remove/.test(m[0]) && hasToggleCounterpart(code, m[1])) continue; // reversible toggle
+    const line = code.slice(0, m.index).split(/\r?\n/).length;
+    hits.push({ line, call: `${m[0].trim()}` });
+  }
+  if (!hits.length) return null;
+  return hasGuard ? false : hits;
+};
+
+const ruleDestructiveConfirm = () => {
+  const id = 'ux/destructive-confirm';
+  if (surface !== 'rn') return skip(id, 'Not an RN app');
+  if (ruleSkipsAll(id)) return skip(id, 'Disabled via qa/baseline.json "ux/destructive-confirm/skip"');
+  const files = srcSourceFiles().filter((f) => {
+    const rel = relative(join(appDir, 'src'), f).replace(/\\/g, '/');
+    return rel.startsWith('screens/') || rel.startsWith('components/');
+  });
+  if (!files.length) return skip(id, 'No screen/component source files');
+  const hits = [];
+  for (const f of files) {
+    const rel = relative(appDir, f);
+    if (ruleSkipsFile(id, rel)) continue;
+    const raw = readText(f);
+    if (!raw) continue;
+    const found = detectUnconfirmedDeletes(stripComments(raw));
+    if (Array.isArray(found)) {
+      for (const h of found) hits.push(`${rel}:${h.line}: ${h.call} — deletes user data with no Alert.alert confirm and no undo in this file`);
+    }
+  }
+  if (hits.length) {
+    return uxWarn(id,
+      'Destructive action with no confirm or undo — a delete*/remove* of user data fires from a screen/component that has no Alert.alert confirmation and no undo affordance. A mis-tap is unrecoverable. Wrap it in a confirm, or offer undo (canon § Interaction safety)', hits);
+  }
+  return pass(id, 'Destructive actions confirm or offer undo');
+};
+
+// ---------- rules: shipped-but-dead modules (ticket qa-canonical-wired-modules) ----------
+//
+// The module-present-but-never-called defect class hit three times on one app
+// (home-maintenance + tend shipped/ship a review prompt and/or tip jar that
+// nothing triggers). These two guard it: a module file exists in the tree but no
+// screen/App renders or calls it, so it's dead weight the user never sees. WARN.
+
+// Pure core (self-tested): is recordSuccessfulCompletion referenced by any of the
+// candidate caller texts (screens + App.tsx)?
+const completionReferenced = (callerTexts) =>
+  callerTexts.some((t) => typeof t === 'string' && t.includes('recordSuccessfulCompletion'));
+
+// A `src/lib/*` file is a legitimate wiring-indirection layer: an app may
+// centralize its success moment in e.g. lib/reviewTrigger.ts (which calls
+// recordSuccessfulCompletion) and have a screen import THAT. Count such a lib
+// file as a caller only when a screen/App actually imports it (by basename), so
+// the indirection is real, not a dead re-export (packing-list, found 2026-07-08).
+const libWiringCallerTexts = (appDir, screenAppTexts) => {
+  const out = [];
+  const libDir = join(appDir, 'src', 'lib');
+  if (!exists(libDir)) return out;
+  const importedBases = new Set();
+  for (const text of screenAppTexts) {
+    for (const m of text.matchAll(/from\s+['"][^'"]*\/lib\/([A-Za-z0-9_]+)['"]/g)) importedBases.add(m[1]);
+  }
+  for (const f of srcSourceFiles()) {
+    const rel = relative(join(appDir, 'src'), f).replace(/\\/g, '/');
+    if (!rel.startsWith('lib/')) continue;
+    const base = rel.replace(/^lib\//, '').replace(/\.(t|j)sx?$/, '');
+    if (importedBases.has(base)) out.push(readText(f) || '');
+  }
+  return out;
+};
+
+const ruleReviewPromptWired = () => {
+  const id = 'review-prompt/wired';
+  if (surface !== 'rn') return skip(id, 'Not an RN app');
+  const mod = join(appDir, 'src', 'storage', 'reviewPrompt.ts');
+  if (!exists(mod)) return skip(id, 'No src/storage/reviewPrompt.ts (no review prompt module)');
+  const screenApp = [
+    ...srcSourceFiles().filter((f) => relative(join(appDir, 'src'), f).replace(/\\/g, '/').startsWith('screens/')),
+    join(appDir, 'App.tsx'),
+  ].map((f) => readText(f) || '');
+  const callers = [...screenApp, ...libWiringCallerTexts(appDir, screenApp)];
+  if (!completionReferenced(callers)) {
+    return warn(id,
+      'Review prompt is dead: src/storage/reviewPrompt.ts exists but recordSuccessfulCompletion is never called from a screen, App.tsx, or a screen-imported src/lib wiring file, so the prompt can never fire. Call it at the app\'s genuine success moment, or delete the module',
+      ['recordSuccessfulCompletion not referenced from src/screens/**, App.tsx, or a screen-imported src/lib/*']);
+  }
+  return pass(id, 'Review prompt is wired (recordSuccessfulCompletion reachable from a screen/App)');
+};
+
+const ruleTipJarWired = () => {
+  const id = 'funding/tip-jar-wired';
+  if (surface !== 'rn') return skip(id, 'Not an RN app');
+  const sheet = join(appDir, 'src', 'components', 'TipJarSheet.tsx');
+  if (!exists(sheet)) return skip(id, 'No src/components/TipJarSheet.tsx (no tip jar)');
+  const others = srcSourceFiles().filter((f) => f !== sheet).map((f) => readText(f) || '');
+  const renderedElsewhere = others.some((t) => /<\s*TipJarSheet\b/.test(t));
+  const onSupportPassed = others.some((t) => /onSupport\s*=\s*\{/.test(t));
+  const missing = [];
+  if (!renderedElsewhere) missing.push('TipJarSheet.tsx exists but is never rendered (<TipJarSheet …/>) outside its own file — the tip jar is unreachable');
+  if (!onSupportPassed) missing.push('no onSupport={…} handler is passed to any footer/row — nothing opens the tip jar');
+  if (missing.length) {
+    return warn(id, 'Tip jar present but not wired to a trigger — the module ships but the user can never open it (canon § Donation prompt)', missing);
+  }
+  return pass(id, 'Tip jar is rendered and reachable (onSupport wired)');
+};
+
 const CANONICAL_RULES = [
   ruleLicense,
   rulePrivacy,
@@ -1092,6 +1784,14 @@ const CANONICAL_RULES = [
   ruleAppNameSpotlightSafe,
   ruleKeyboardDismissEscape,
   ruleModalSafeAreaProvider,
+  ruleEntryScreenAutofocus,
+  ruleCreateOnMount,
+  ruleScrollformKeyboardAvoidance,
+  ruleTouchTargetMin,
+  ruleEmptyStatePresent,
+  ruleDestructiveConfirm,
+  ruleReviewPromptWired,
+  ruleTipJarWired,
   ruleSplashWordmarkClip,
   ruleTipJarNoGmsGuard,
   ruleManifestMv3,
@@ -1100,8 +1800,12 @@ const CANONICAL_RULES = [
   ruleTrustCoreCovered,
   ruleFlowHasAssertions,
   ruleFlowDrift,
+  ruleActionsMapped,
   ruleNoHardcodedStrings,
   ruleScreenshotCaptionNoPrice,
+  ruleDemoFramesValid,
+  ruleFileSizeCeiling,
+  ruleDepBudget,
 ];
 
 async function loadAppRules() {
@@ -1130,7 +1834,87 @@ const sym = {
   [SKIP]: COLOR ? c(90, '·') : 'SKIP',
 };
 
+// ---------- self-test: prove each new rule's pure core FAILS a known-bad ----------
+//
+// Canon (gates prove failure): a rule that never fires on the defect it guards is
+// theatre. Each UX / wired rule extracts a pure detection core above; here we run
+// each against a known-BAD source string (must fire) and a known-GOOD one (must
+// not), so a future edit that guts a rule trips the self-test in the chain's
+// verify gate. Layout mirrors action-coverage.mjs's in-file runSelfTest().
+function runSelfTest() {
+  let failed = 0;
+  const assert = (cond, msg) => { if (!cond) { failed++; console.error(`  ✗ ${msg}`); } else console.log(`  ✓ ${msg}`); };
+
+  // ux/touch-target-min
+  assert(detectSmallTouchTargets(`<Pressable style={{ height: 32, width: 32 }} onPress={x}/>`).length === 1,
+    'touch-target: inline sub-44 size with no hitSlop fires');
+  assert(detectSmallTouchTargets(`<Pressable style={{ height: 32 }} hitSlop={8} onPress={x}/>`).length === 0,
+    'touch-target: hitSlop on the pressable passes');
+  assert(detectSmallTouchTargets(`<Pressable style={{ minHeight: 44 }} onPress={x}/>`).length === 0,
+    'touch-target: a 44dp target passes');
+  assert(detectSmallTouchTargets(`<Pressable style={{ height: target.min }} onPress={x}/>`).length === 0,
+    'touch-target: target.min sizing passes (non-numeric)');
+  assert(detectSmallTouchTargets(`const s = StyleSheet.create({ btn: { height: 30 } });\n<Pressable style={s.btn} onPress={x}/>`).length === 1,
+    'touch-target: named StyleSheet ref resolved to a sub-44 size fires');
+  assert(detectSmallTouchTargets(`<View style={{ height: 20 }}/>`).length === 0,
+    'touch-target: a non-pressable View is not measured');
+  assert(detectSmallTouchTargets(`const s = StyleSheet.create({ fab: { width: 56, height: 56, shadowOffset: { width: 0, height: 4 } } });\n<Pressable style={s.fab} onPress={x}/>`).length === 0,
+    'touch-target: a shadowOffset { width: 0 } on a 56dp FAB is NOT a 0dp target');
+
+  // ux/empty-state-present
+  assert(detectMissingEmptyState(`<FlatList data={x} renderItem={r}/>`) === true,
+    'empty-state: a bare FlatList with no empty surface fires');
+  assert(detectMissingEmptyState(`<FlatList data={x} ListEmptyComponent={<EmptyState/>} renderItem={r}/>`) === false,
+    'empty-state: ListEmptyComponent passes');
+  assert(detectMissingEmptyState(`return items.length === 0 ? <EmptyState/> : <FlatList data={items}/>`) === false,
+    'empty-state: a zero-length branch passes');
+  assert(detectMissingEmptyState(`<Text>no lists here</Text>`) === null,
+    'empty-state: a file with no list is not applicable');
+
+  // ux/destructive-confirm
+  assert(Array.isArray(detectUnconfirmedDeletes(`function onTap(){ store.deleteTrip(id); }`)),
+    'destructive-confirm: an unguarded store delete fires');
+  assert(detectUnconfirmedDeletes(`function onTap(){ Alert.alert('Delete?','',[{text:'Delete',onPress:()=>store.deleteTrip(id)}]); }`) === false,
+    'destructive-confirm: a delete inside an Alert.alert passes');
+  assert(detectUnconfirmedDeletes(`function onTap(){ removeTrip(id); showUndoToast(); }`) === false,
+    'destructive-confirm: a delete with an undo affordance passes');
+  assert(detectUnconfirmedDeletes(`useEffect(()=>{ const sub = nav.addListener('x'); return ()=>sub.removeListener(); },[])`) === null,
+    'destructive-confirm: removeListener is denylisted (no fire)');
+  assert(detectUnconfirmedDeletes(`useEffect(()=>{ const sub = AppState.addEventListener('change', h); return ()=>sub.remove(); },[])`) === null,
+    'destructive-confirm: a bare subscription .remove() is NOT a data delete (no fire)');
+  assert(detectUnconfirmedDeletes(`<Text>just copy</Text>`) === null,
+    'destructive-confirm: no destructive call is not applicable');
+  assert(detectUnconfirmedDeletes(`function toggle(){ if(on) removeStaple(name); else addStaple(name); }`) === null,
+    'destructive-confirm: a remove with a same-file add counterpart is a reversible toggle (no fire)');
+  assert(Array.isArray(detectUnconfirmedDeletes(`function onTap(){ removeStaple(name); }`)),
+    'destructive-confirm: a remove with NO add counterpart still fires');
+  assert(detectUnconfirmedDeletes(`import { useConfirm } from './Dialogs'; function S(){ const confirm = useConfirm(); return confirm.open({ onConfirm: () => deleteList(id) }); }`) === false,
+    'destructive-confirm: a delete guarded by the useConfirm() primitive passes');
+
+  // rn/keyboard-dismiss-escape (promoted to FAIL)
+  assert(keyboardTrapped(`<TextInput blurOnSubmit={false} onSubmitEditing={s}/>`) === true,
+    'keyboard-trap: persistent keyboard with no escape fires');
+  assert(keyboardTrapped(`<TextInput blurOnSubmit={false} onSubmitEditing={()=>{ if(!v){Keyboard.dismiss();return;} add(v); }}/>`) === false,
+    'keyboard-trap: a Keyboard.dismiss() escape passes');
+
+  // review-prompt/wired
+  assert(completionReferenced([`const x = 1;`, `import {recordSuccessfulCompletion} from '../storage/reviewPrompt';`]) === true,
+    'review-prompt/wired: recordSuccessfulCompletion referenced → wired');
+  assert(completionReferenced([`const x = 1;`, `<View/>`]) === false,
+    'review-prompt/wired: no reference → dead');
+
+  // funding/tip-jar-wired regexes (cross-file predicates)
+  assert(/<\s*TipJarSheet\b/.test(`<TipJarSheet visible={open}/>`) === true,
+    'tip-jar/wired: a render site is detected');
+  assert(/onSupport\s*=\s*\{/.test(`<FundingFooter onSupport={openTipJar}/>`) === true,
+    'tip-jar/wired: an onSupport handler pass is detected');
+
+  console.log(failed ? `\nqa-canonical self-test FAILED (${failed})` : '\nqa-canonical self-test PASSED');
+  process.exit(failed ? 1 : 0);
+}
+
 (async () => {
+  if (flags.has('--self-test')) { runSelfTest(); return; }
   const appRules = await loadAppRules();
   const allRules = [...CANONICAL_RULES, ...appRules];
   const results = [];
