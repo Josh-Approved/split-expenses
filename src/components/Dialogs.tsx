@@ -2,9 +2,11 @@
  * Cross-platform action menu, text-input prompt, and confirm dialog.
  *
  * Replaces `ActionSheetIOS`, `Alert.prompt`, and `Alert.alert` (all iOS-only or
- * iOS-divergent), so group/expense management works identically on both
- * platforms. Studio tenet: functional parity is mandatory; no OS-specific
- * frameworks for core functionality (canon § Cross-platform functional parity).
+ * iOS-divergent), so every management flow works identically on both platforms.
+ * Studio tenet: functional parity is mandatory; no OS-specific frameworks for
+ * core functionality (canon § Cross-platform functional parity).
+ *
+ * Canonical, app-agnostic — synced by `sync.mjs app-shell`; do not fork.
  *
  * Styling mirrors the canonical ReviewModal (same scrim/card tokens) so every
  * dialog reads as a sibling. Reduced motion collapses the present animation to
@@ -105,7 +107,12 @@ export function useActionMenu(): {
       statusBarTranslucent
       onRequestClose={close}
     >
-      <Pressable style={s.sheetOverlay} onPress={close} accessibilityRole="button" accessibilityLabel={t('dialogs.closeMenu')}>
+      <Pressable
+        style={s.sheetOverlay}
+        onPress={close}
+        accessibilityRole="button"
+        accessibilityLabel={t('common.closeMenu')}
+      >
         <Pressable style={s.sheet} onPress={(e) => e.stopPropagation()}>
           {state.title ? (
             <Text style={s.sheetTitle} accessibilityRole="header">
@@ -120,7 +127,9 @@ export function useActionMenu(): {
               accessibilityRole="button"
               accessibilityLabel={opt.label}
             >
-              <Text style={[s.sheetRowText, opt.destructive && s.sheetRowDanger]}>{opt.label}</Text>
+              <Text style={[s.sheetRowText, opt.destructive && s.sheetRowDanger]}>
+                {opt.label}
+              </Text>
             </Pressable>
           ))}
           <Pressable
@@ -200,7 +209,12 @@ export function usePrompt(): {
       onRequestClose={close}
     >
       <KeyboardAvoidingView style={s.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <Pressable style={s.centerOverlay} onPress={close} accessibilityRole="button" accessibilityLabel={t('common.cancel')}>
+        <Pressable
+          style={s.centerOverlay}
+          onPress={close}
+          accessibilityRole="button"
+          accessibilityLabel={t('common.cancel')}
+        >
           <Pressable style={s.card} onPress={(e) => e.stopPropagation()}>
             <Text style={s.cardTitle} accessibilityRole="header">
               {state.title}
@@ -221,7 +235,12 @@ export function usePrompt(): {
               accessibilityLabel={state.title}
             />
             <View style={s.cardActions}>
-              <Pressable style={({ pressed }) => [s.btnGhost, pressed && s.pressed]} onPress={close} accessibilityRole="button" accessibilityLabel={t('common.cancel')}>
+              <Pressable
+                style={({ pressed }) => [s.btnGhost, pressed && s.pressed]}
+                onPress={close}
+                accessibilityRole="button"
+                accessibilityLabel={t('common.cancel')}
+              >
                 <Text style={s.btnGhostText}>{t('common.cancel')}</Text>
               </Pressable>
               <Pressable
@@ -244,8 +263,14 @@ export function usePrompt(): {
 }
 
 // ---------------------------------------------------------------------------
-// Confirm dialog (destructive actions)
+// Confirm dialog (canon § Interaction safety)
 // ---------------------------------------------------------------------------
+//
+// A titled Cancel / Confirm card for consequential actions. Pass
+// `destructive: true` for unrecoverable ones (delete a list, remove a member)
+// — the confirm button carries the danger tint so the stakes read at a glance,
+// and a mis-tap on the original control costs one extra deliberate tap, not
+// the data.
 
 interface ConfirmConfig {
   title: string;
@@ -283,14 +308,24 @@ export function useConfirm(): {
       statusBarTranslucent
       onRequestClose={close}
     >
-      <Pressable style={s.centerOverlay} onPress={close} accessibilityRole="button" accessibilityLabel={t('common.cancel')}>
+      <Pressable
+        style={s.centerOverlay}
+        onPress={close}
+        accessibilityRole="button"
+        accessibilityLabel={t('common.cancel')}
+      >
         <Pressable style={s.card} onPress={(e) => e.stopPropagation()}>
           <Text style={s.cardTitle} accessibilityRole="header">
             {state.title}
           </Text>
           {state.message ? <Text style={s.cardMessage}>{state.message}</Text> : null}
           <View style={s.cardActions}>
-            <Pressable style={({ pressed }) => [s.btnGhost, pressed && s.pressed]} onPress={close} accessibilityRole="button" accessibilityLabel={t('common.cancel')}>
+            <Pressable
+              style={({ pressed }) => [s.btnGhost, pressed && s.pressed]}
+              onPress={close}
+              accessibilityRole="button"
+              accessibilityLabel={t('common.cancel')}
+            >
               <Text style={s.btnGhostText}>{t('common.cancel')}</Text>
             </Pressable>
             <Pressable
@@ -299,7 +334,9 @@ export function useConfirm(): {
               accessibilityRole="button"
               accessibilityLabel={state.confirmLabel ?? t('common.confirm')}
             >
-              <Text style={[s.btnPrimaryText, state.destructive && s.btnDangerText]}>{state.confirmLabel ?? t('common.confirm')}</Text>
+              <Text style={[s.btnPrimaryText, state.destructive && s.btnDangerText]}>
+                {state.confirmLabel ?? t('common.confirm')}
+              </Text>
             </Pressable>
           </View>
         </Pressable>
