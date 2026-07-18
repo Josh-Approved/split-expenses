@@ -21,21 +21,31 @@ appId: com.joshapproved.splitexpenses
     visible: { text: "Lisbon trip.*" }
     timeout: 15000
 - takeScreenshot: qa/captures/${STORE}/list
-- tapOn: { text: "Lisbon trip.*" }
+- tapOn:
+    text: "Lisbon trip.*"
+    retryTapIfNoChange: true
 - extendedWaitUntil:
     visible: { text: "Add expense" }
     timeout: 10000
 - takeScreenshot: qa/captures/${STORE}/detail
 - assertNotVisible: { text: ".*\\$42\\.00.*" }
-- tapOn: { text: "Add expense" }
+- tapOn:
+    text: "Add expense"
+    retryTapIfNoChange: true
 - extendedWaitUntil:
     visible: { text: "New expense" }
     timeout: 10000
-- tapOn: { text: "Amount" }
+- tapOn:
+    text: "Amount"
+    retryTapIfNoChange: true
 - inputText: "42"
-- tapOn: { text: "Description" }
+- tapOn:
+    text: "Description"
+    retryTapIfNoChange: true
 - takeScreenshot: qa/captures/${STORE}/editor
-- tapOn: { text: "Add expense" }
+- tapOn:
+    text: "Add expense"
+    retryTapIfNoChange: true
 - extendedWaitUntil:
     visible: { text: "Add expense" }
     timeout: 10000
