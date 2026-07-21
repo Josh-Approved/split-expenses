@@ -335,7 +335,7 @@ function makeStyles(c: Colors) {
       minHeight: 40,
       minWidth: 100,
     },
-    fieldCode: { ...ty.sm, fontFamily: fontFamily.sansMedium, color: c.fgSubtle },
+    fieldCode: { ...ty.sm, fontFamily: fontFamily.sansMedium, color: c.fgMuted },
     amountInput: { ...ty.base, fontFamily: fontFamily.mono, color: c.fg, flex: 1, textAlign: 'right', paddingVertical: space.s2 },
 
     stepper: { flexDirection: 'row', alignItems: 'center', gap: space.s4 },
@@ -352,6 +352,6 @@ function makeStyles(c: Colors) {
 
     foot: { marginTop: space.s4, gap: 2 },
     footLine: { ...ty.sm, fontFamily: fontFamily.sansSemibold, color: c.fgMuted },
-    footNote: { ...ty.sm, fontFamily: fontFamily.sans, color: c.fgSubtle, marginTop: space.s3 },
+    footNote: { ...ty.sm, fontFamily: fontFamily.sans, color: c.fgMuted, marginTop: space.s3 },
   });
 }

@@ -227,7 +227,7 @@ function makeStyles(c: Colors) {
       minHeight: target.min,
     },
     ghostText: { ...ty.base, fontFamily: fontFamily.sans, color: c.fg },
-    fineprint: { ...ty.sm, fontFamily: fontFamily.sans, color: c.fgSubtle, textAlign: 'center', lineHeight: 20 },
+    fineprint: { ...ty.sm, fontFamily: fontFamily.sans, color: c.fgMuted, textAlign: 'center', lineHeight: 20 },
 
     scanWrap: { flex: 1, alignItems: 'center', gap: space.s5 },
     camera: { width: '86%', aspectRatio: 1, borderRadius: radius.lg, overflow: 'hidden', marginTop: space.s5 },

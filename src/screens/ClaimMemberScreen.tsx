@@ -149,6 +149,6 @@ function makeStyles(c: Colors) {
     ghostBtn: { minHeight: target.min, justifyContent: 'center', paddingHorizontal: space.s6 },
     ghostText: { ...ty.base, fontFamily: fontFamily.sansSemibold, color: c.appAccent },
     skip: { alignSelf: 'center', minHeight: target.min, justifyContent: 'center', paddingBottom: space.s4 },
-    skipText: { ...ty.base, fontFamily: fontFamily.sans, color: c.fgSubtle },
+    skipText: { ...ty.base, fontFamily: fontFamily.sans, color: c.fgMuted },
   });
 }

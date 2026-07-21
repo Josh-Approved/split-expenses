@@ -315,7 +315,7 @@ function makeStyles(c: Colors) {
     balanceName: { ...ty.base, fontFamily: fontFamily.sansMedium, color: c.fg, flex: 1 },
     balanceStatus: { ...ty.base, fontFamily: fontFamily.sansMedium, textAlign: 'right' },
 
-    hint: { ...ty.sm, fontFamily: fontFamily.sans, color: c.fgSubtle, marginTop: space.s3, paddingHorizontal: space.s2 },
+    hint: { ...ty.sm, fontFamily: fontFamily.sans, color: c.fgMuted, marginTop: space.s3, paddingHorizontal: space.s2 },
 
     planRow: {
       flexDirection: 'row',
@@ -327,7 +327,7 @@ function makeStyles(c: Colors) {
     },
     planPeople: { ...ty.base, fontFamily: fontFamily.sans, color: c.fg, flex: 1 },
     planFrom: { fontFamily: fontFamily.sansMedium, color: c.fg },
-    planArrow: { color: c.fgSubtle },
+    planArrow: { color: c.fgMuted },
     planTo: { fontFamily: fontFamily.sansMedium, color: c.fg },
     planAmount: { ...ty.base, fontFamily: fontFamily.sansSemibold, color: c.fg },
   });

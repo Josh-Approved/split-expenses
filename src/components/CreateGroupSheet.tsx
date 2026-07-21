@@ -215,6 +215,6 @@ function makeStyles(c: Colors) {
     removeBtn: { width: 32, height: 32, alignItems: 'center', justifyContent: 'center' },
     addRow: { flexDirection: 'row', alignItems: 'center', gap: space.s3, paddingVertical: space.s4 },
     addRowText: { ...ty.base, fontFamily: fontFamily.sansMedium, color: c.appAccent },
-    hint: { ...ty.sm, fontFamily: fontFamily.sans, color: c.fgSubtle, marginTop: space.s4 },
+    hint: { ...ty.sm, fontFamily: fontFamily.sans, color: c.fgMuted, marginTop: space.s4 },
   });
 }

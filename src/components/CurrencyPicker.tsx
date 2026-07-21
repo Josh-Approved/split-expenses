@@ -117,6 +117,6 @@ function makeStyles(c: Colors) {
     },
     code: { ...ty.base, fontFamily: fontFamily.sansSemibold, color: c.fg, width: 52 },
     name: { ...ty.base, fontFamily: fontFamily.sans, color: c.fgMuted, flex: 1 },
-    symbol: { ...ty.base, fontFamily: fontFamily.sans, color: c.fgSubtle, width: 36, textAlign: 'right' },
+    symbol: { ...ty.base, fontFamily: fontFamily.sans, color: c.fgMuted, width: 36, textAlign: 'right' },
   });
 }

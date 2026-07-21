@@ -221,7 +221,7 @@ function makeStyles(c: Colors) {
     header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: space.s4 },
     title: { ...ty.md, fontFamily: fontFamily.sansSemibold, color: c.fg },
     done: { ...ty.base, fontFamily: fontFamily.sansSemibold, color: c.appAccent },
-    hint: { ...ty.sm, fontFamily: fontFamily.sans, color: c.fgSubtle, marginBottom: space.s4 },
+    hint: { ...ty.sm, fontFamily: fontFamily.sans, color: c.fgMuted, marginBottom: space.s4 },
 
     row: {
       flexDirection: 'row',
@@ -257,7 +257,7 @@ function makeStyles(c: Colors) {
       minHeight: 40,
       minWidth: 120,
     },
-    fieldCode: { ...ty.sm, fontFamily: fontFamily.sansMedium, color: c.fgSubtle },
+    fieldCode: { ...ty.sm, fontFamily: fontFamily.sansMedium, color: c.fgMuted },
     amountInput: { ...ty.base, fontFamily: fontFamily.mono, color: c.fg, flex: 1, textAlign: 'right', paddingVertical: space.s2 },
 
     evenlyBtn: { alignSelf: 'flex-start', paddingVertical: space.s4 },

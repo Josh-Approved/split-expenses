@@ -404,7 +404,7 @@ function makeStyles(c: Colors) {
     },
     identityLabel: { ...ty.sm, fontFamily: fontFamily.sans, color: c.fgMuted },
     identityName: { ...ty.base, fontFamily: fontFamily.sansSemibold, color: c.fg, marginTop: 1 },
-    identityChevron: { ...ty.md, fontFamily: fontFamily.sans, color: c.fgSubtle },
+    identityChevron: { ...ty.md, fontFamily: fontFamily.sans, color: c.fgMuted },
     memberRow: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -429,7 +429,7 @@ function makeStyles(c: Colors) {
 
     addRow: { flexDirection: 'row', alignItems: 'center', gap: space.s3, paddingVertical: space.s5 },
     addRowText: { ...ty.base, fontFamily: fontFamily.sansMedium, color: c.appAccent },
-    footer: { ...ty.sm, fontFamily: fontFamily.sans, color: c.fgSubtle, marginTop: space.s4, lineHeight: 20 },
+    footer: { ...ty.sm, fontFamily: fontFamily.sans, color: c.fgMuted, marginTop: space.s4, lineHeight: 20 },
 
     // Handles sheet
     sheetScreen: { flex: 1, backgroundColor: c.bg, paddingHorizontal: space.s5 },
@@ -448,6 +448,6 @@ function makeStyles(c: Colors) {
       minHeight: target.min,
       justifyContent: 'center',
     },
-    helper: { ...ty.sm, fontFamily: fontFamily.sans, color: c.fgSubtle, marginTop: space.s3 },
+    helper: { ...ty.sm, fontFamily: fontFamily.sans, color: c.fgMuted, marginTop: space.s3 },
   });
 }

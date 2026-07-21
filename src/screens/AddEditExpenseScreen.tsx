@@ -546,7 +546,7 @@ function makeStyles(c: Colors) {
       minHeight: target.min,
     },
     selectValue: { ...ty.base, fontFamily: fontFamily.sansMedium, color: c.fg },
-    chevron: { fontSize: 24, lineHeight: 26, color: c.fgSubtle, fontFamily: fontFamily.sans },
+    chevron: { fontSize: 24, lineHeight: 26, color: c.fgMuted, fontFamily: fontFamily.sans },
     inlineHint: { ...ty.sm, fontFamily: fontFamily.sansMedium, marginTop: space.s3 },
 
     catScroll: { gap: space.s3, paddingRight: space.s5 },
