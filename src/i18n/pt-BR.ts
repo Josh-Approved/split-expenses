@@ -47,7 +47,7 @@ const pt_BR = {
     wayOne: 'parte',
     wayOther: 'partes',
     thisGroup: 'este grupo',
-    sync: { connected: 'Conectado', offline: 'Sem conexão', syncing: 'Sincronizando…', a11y: 'Sincronização do grupo compartilhado: {status}. Toque para sincronizar agora.' },
+    sync: { connected: 'Conectado', offline: 'Sem conexão', syncing: 'Sincronizando…', trouble: 'Sem sincronizar', a11y: 'Sincronização do grupo compartilhado: {status}. Toque para sincronizar agora.' },
   },
   claim: {
     addSelfTitle: 'Adicione você',

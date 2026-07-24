@@ -33,7 +33,7 @@ import { useGroups } from '../store/groups';
 import type { Group } from '../data/types';
 import { channelId, seal, open } from './crypto';
 import { DropBoxTransport } from './transport';
-import { markConnected, markReceived, markSent, dropStatus } from './status';
+import { markConnected, markDelivered, markReceived, markSent, dropStatus } from './status';
 
 /** Control message asking peers to re-publish current state. A state message is
  *  a bare Group (has `shareIdentity`, no `_sync`), so the two never collide. */
@@ -75,6 +75,7 @@ function ensureChannel(secret: string): Channel {
     (ct) => receive(secret, ct),
     () => onReconnect(secret),
     (openRelays) => markConnected(secret, openRelays > 0),
+    (delivered) => markDelivered(secret, delivered),
   );
   ch = { transport, lastSent: '', timer: null, lastHelloAt: 0 };
   channels.set(secret, ch);

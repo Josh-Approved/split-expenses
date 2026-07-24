@@ -54,6 +54,7 @@ export const APP_STRINGS = {
       connected: 'Connected',
       offline: 'Offline',
       syncing: 'Syncing…',
+      trouble: 'Not syncing',
       a11y: 'Shared group sync: {status}. Tap to sync now.',
     },
   },

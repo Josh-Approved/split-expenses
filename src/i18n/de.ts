@@ -47,7 +47,7 @@ const de = {
     wayOne: 'Anteil',
     wayOther: 'Anteile',
     thisGroup: 'diese Gruppe',
-    sync: { connected: 'Verbunden', offline: 'Offline', syncing: 'Wird synchronisiert…', a11y: 'Synchronisierung der geteilten Gruppe: {status}. Zum Synchronisieren tippen.' },
+    sync: { connected: 'Verbunden', offline: 'Offline', syncing: 'Wird synchronisiert…', trouble: 'Synchronisiert nicht', a11y: 'Synchronisierung der geteilten Gruppe: {status}. Zum Synchronisieren tippen.' },
   },
   claim: {
     addSelfTitle: 'Dich hinzufügen',

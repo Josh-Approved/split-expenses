@@ -47,7 +47,7 @@ const es = {
     wayOne: 'parte',
     wayOther: 'partes',
     thisGroup: 'este grupo',
-    sync: { connected: 'Conectado', offline: 'Sin conexión', syncing: 'Sincronizando…', a11y: 'Sincronización del grupo compartido: {status}. Toca para sincronizar ahora.' },
+    sync: { connected: 'Conectado', offline: 'Sin conexión', syncing: 'Sincronizando…', trouble: 'Sin sincronizar', a11y: 'Sincronización del grupo compartido: {status}. Toca para sincronizar ahora.' },
   },
   claim: {
     addSelfTitle: 'Añádete',

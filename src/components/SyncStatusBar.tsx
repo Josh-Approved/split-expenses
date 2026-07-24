@@ -36,11 +36,17 @@ export function SyncStatusBar({ secret }: { secret: string }) {
   const label = syncing
     ? t('group.sync.syncing')
     : status.connected
-      ? t('group.sync.connected')
+      ? status.publishRejected
+        ? t('group.sync.trouble')
+        : t('group.sync.connected')
       : t('group.sync.offline');
+  // A connection relays are refusing our updates on must not read as
+  // "connected" — the socket is up but our state isn't actually leaving the
+  // device ("sent" ≠ "delivered"). The label carries the meaning; the dot is
+  // secondary, so it just falls back to the same muted colour as offline.
   const dotColor = syncing
     ? c.appAccent
-    : status.connected
+    : status.connected && !status.publishRejected
       ? c.success
       : c.fgSubtle;
 
