@@ -58,7 +58,7 @@ encrypted through public drop boxes we don't run and can't read.
 ## Feedback
 
 Found a bug or want something? Email **feedback@joshapproved.com**, or open an
-issue. If the app's useful to you, you can [support it](https://buymeacoffee.com/jtysonwilliams) — pay what you want, nothing required.
+issue. If the app's useful to you, there's an optional tip jar in the app.
 
 ## License
 
