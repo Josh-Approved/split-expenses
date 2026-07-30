@@ -40,8 +40,47 @@ import { markConnected, markDelivered, markReceived, markSent, dropStatus } from
 const HELLO = JSON.stringify({ _sync: 'hello' });
 const HELLO_DEBOUNCE_MS = 3000;
 
+/** The slice of DropBoxTransport the engine drives. Named so a test can inject
+ *  a fake (see __setTransportFactory) — the production transport is created and
+ *  torn down entirely inside this module, so the wiring is otherwise unreachable. */
+export interface EngineTransport {
+  start(): void;
+  publish(ciphertext: string): void;
+  close(): void;
+}
+
+/** Factory for a transport; the signature matches the real `new DropBoxTransport(...)`
+ *  call in `ensureChannel` exactly (channel, onReceive, onReconnect,
+ *  onConnected(openRelays), onDelivered(delivered)). */
+type TransportFactory = (
+  channel: string,
+  onReceive: (ciphertext: string) => void,
+  onReconnect: () => void,
+  onConnected: (openRelays: number) => void,
+  onDelivered: (delivered: boolean) => void,
+) => EngineTransport;
+
+let makeTransport: TransportFactory = (
+  channel,
+  onReceive,
+  onReconnect,
+  onConnected,
+  onDelivered,
+) => new DropBoxTransport(channel, onReceive, onReconnect, onConnected, onDelivered);
+
+/** TEST-ONLY seam: swap the transport factory (e.g. for a recording fake) and
+ *  get back a restore fn. Production never calls this — the default factory
+ *  builds the real DropBoxTransport with the same arguments. */
+export function __setTransportFactory(factory: TransportFactory): () => void {
+  const prev = makeTransport;
+  makeTransport = factory;
+  return () => {
+    makeTransport = prev;
+  };
+}
+
 interface Channel {
-  transport: DropBoxTransport;
+  transport: EngineTransport;
   lastSent: string;
   timer: ReturnType<typeof setTimeout> | null;
   lastHelloAt: number;
@@ -70,7 +109,7 @@ function serializeForWire(group: Group): string {
 function ensureChannel(secret: string): Channel {
   let ch = channels.get(secret);
   if (ch) return ch;
-  const transport = new DropBoxTransport(
+  const transport = makeTransport(
     channelId(secret),
     (ct) => receive(secret, ct),
     () => onReconnect(secret),
