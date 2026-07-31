@@ -12,7 +12,7 @@
  * group). Numbers are computed in the group's base currency.
  */
 
-import React, { useState } from 'react';
+import React from 'react';
 import { View, Text, ScrollView, Pressable, StyleSheet, Linking, Share } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -32,9 +32,6 @@ import { useTheme, fontFamily, space, radius, type as ty, hairline, type Colors 
 import { EmptyState, SectionLabel } from '../components/ui';
 import { useActionMenu } from '../components/Dialogs';
 import { t } from '../i18n';
-import ReviewModal from '../components/ReviewModal';
-import { recordSuccessfulCompletion } from '../storage/reviewPrompt';
-import { IOS_APP_STORE_ID, ANDROID_PACKAGE } from '../lib/links';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'SettleUp'>;
 
@@ -48,7 +45,6 @@ export default function SettleUpScreen({ navigation, route }: Props) {
   const meId = useGroups((st) => st.me[groupId]);
 
   const menu = useActionMenu();
-  const [reviewVisible, setReviewVisible] = useState(false);
 
   if (!group) {
     return (
@@ -108,13 +104,6 @@ export default function SettleUpScreen({ navigation, route }: Props) {
         method,
         date: Date.now(),
       });
-      // Recording a settle-up is this app's genuine, satisfying success — the
-      // canonical review prompt's only trigger here (never on launch/error).
-      recordSuccessfulCompletion()
-        .then((show) => {
-          if (show) setReviewVisible(true);
-        })
-        .catch(() => {});
     };
 
     const iOwe = transfer.from === meId;
@@ -251,14 +240,6 @@ export default function SettleUpScreen({ navigation, route }: Props) {
       </ScrollView>
 
       {menu.element}
-
-      <ReviewModal
-        visible={reviewVisible}
-        onDismiss={() => setReviewVisible(false)}
-        appName="Split Expenses"
-        iosAppStoreId={IOS_APP_STORE_ID}
-        androidPackageName={ANDROID_PACKAGE}
-      />
     </View>
   );
 }

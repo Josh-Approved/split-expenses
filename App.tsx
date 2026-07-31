@@ -21,6 +21,7 @@ import { startSyncEngine, flushSyncEngine, stopSyncEngine } from './src/sync/eng
 import { prefetchRates } from './src/data/fx';
 import { ensureNotificationHandler } from './src/lib/reminders';
 import { parseShareLink } from './src/sync/share';
+import { IOS_APP_STORE_ID, ANDROID_PACKAGE } from './src/lib/links';
 
 import GroupsHomeScreen from './src/screens/GroupsHomeScreen';
 import GroupDetailScreen from './src/screens/GroupDetailScreen';
@@ -40,6 +41,15 @@ if (!QA_MODE) SplashScreen.preventAutoHideAsync().catch(() => {});
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 export const navRef = createNavigationContainerRef<RootStackParamList>();
+
+/** Store identity for the canonical review prompt. The shell owns the trigger
+ *  (session count, 3/15/30 schedule, 3-per-install cap) — this app carries no
+ *  trigger code. Module scope so the object identity is stable across renders. */
+const REVIEW = {
+  appName: 'Split Expenses',
+  iosAppStoreId: IOS_APP_STORE_ID,
+  androidPackageName: ANDROID_PACKAGE,
+};
 
 export default function App() {
   const [fontsLoaded] = useAppFonts();
@@ -99,7 +109,7 @@ export default function App() {
   const ready = fontsLoaded && hydrated;
 
   return (
-    <AppShell ready={ready} navigationRef={navRef}>
+    <AppShell ready={ready} navigationRef={navRef} review={REVIEW}>
       <Stack.Navigator screenOptions={{ headerShown: false, animation: QA_MODE ? 'none' : undefined }}>
         <Stack.Screen name="GroupsHome" component={GroupsHomeScreen} />
         <Stack.Screen name="GroupDetail" component={GroupDetailScreen} />

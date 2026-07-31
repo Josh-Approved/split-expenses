@@ -42,8 +42,9 @@ import {
 
 type Props = {
   /** Opens the in-app tip jar (canon § Tip jar — the only funding surface;
-   *  Apple 3.1.1 forbids an external donation link-out). When unset, the
-   *  Support button is not rendered — there is no external fallback. */
+   *  Apple 3.1.1 forbids an external donation link-out). Until the app wires
+   *  its tip jar (TipJarSheet + product ids), omit it and the Support button
+   *  is not rendered — there is no external fallback. */
   onSupport?: () => void;
   /** 0→1 progress of the bottom-overscroll pull (from usePullRevealFooter). At
    *  0 the wordmark is hidden; at 1 it has fully popped in. */
