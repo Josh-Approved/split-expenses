@@ -24,7 +24,7 @@ import type {
 import { makeId } from '../lib/id';
 import { nextColor } from '../data/avatars';
 import { makeShareIdentity } from '../sync/share';
-import { mergeGroup } from '../sync/mergeGroup';
+import { mergeGroup, resolveMemberId } from '../sync/mergeGroup';
 import { now as clockNow, initClock, observe as observeClock, peek as clockPeek } from '../sync/clock';
 import {
   loadAllGroups,
@@ -344,8 +344,12 @@ export const useGroups = create<GroupsState>((set, get) => {
           if (from === st.fromMember && to === st.toMember) return st;
           return { ...st, fromMember: from, toMember: to, updatedAt: ts };
         });
+        // `mergedInto` makes the fold durable across sync, exactly as the
+        // merge's own collapse does: a paired device that was offline through
+        // this merge can still publish an expense naming `dropId`, and the
+        // pointer is what lets the next merge re-point it at `keepId`.
         const members = g.members.map((m) =>
-          m.id === dropId ? { ...m, deletedAt: ts, updatedAt: ts } : m,
+          m.id === dropId ? { ...m, mergedInto: keepId, deletedAt: ts, updatedAt: ts } : m,
         );
         return { ...g, expenses, settlements, members };
       });
@@ -424,6 +428,15 @@ export const useGroups = create<GroupsState>((set, get) => {
       const merged = mergeGroup(local, remote);
       set((s) => ({ groups: s.groups.map((g) => (g.id === local.id ? merged : g)) }));
       persist(merged);
+      // If the merge's duplicate-name collapse folded away the member THIS
+      // device is, follow the pointer — otherwise "me" silently points at
+      // someone the roster no longer shows. Same fix-up the manual
+      // `mergeMembers` flow does for a hand-merge.
+      const meId = get().me[local.id];
+      if (meId) {
+        const resolved = resolveMemberId(merged.members, meId);
+        if (resolved !== meId) get().setMe(local.id, resolved);
+      }
     },
 
     importGroups: (incoming) => {

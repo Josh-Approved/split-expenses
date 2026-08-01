@@ -108,6 +108,16 @@ export interface Member {
   emoji?: string;
   /** Opt-in, group-only, E2E-encrypted like everything else. */
   handles?: PaymentHandles;
+  /**
+   * Set when this member was folded into another one (the merge's
+   * duplicate-name collapse — see sync/mergeGroup.ts). Always accompanied by a
+   * tombstone: the record stays as a durable FORWARDING POINTER so any expense
+   * or settlement that still references this id — a stale copy replayed out of
+   * the drop box, an edit made on a device that had not collapsed yet — is
+   * re-pointed at the survivor instead of dangling at someone nobody can see.
+   * A plain user delete never sets this; only a collapse does.
+   */
+  mergedInto?: string;
   createdAt: number;
   updatedAt: number;
   deletedAt?: number;
